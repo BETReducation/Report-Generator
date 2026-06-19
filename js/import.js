@@ -232,8 +232,13 @@ async function importFromGoogleSheets(){
     const text = await res.text();
     // Parse CSV via SheetJS then hand off to the shared import logic
     const wb   = XLSX.read(text, { type: 'string' });
-    const fake = { target: { _wb: wb, files: null } };
-    _importWorkbook(wb, 'Google Sheets');
+    const dataSheets = wb.SheetNames.filter(n => !/instructions/i.test(n));
+    if(dataSheets.length > 1){
+      _pendingWb = wb;
+      openSheetPicker(dataSheets);
+    } else {
+      _importWorkbook(wb, dataSheets[0] || wb.SheetNames[0], 'Google Sheets');
+    }
     if(input) input.value = '';
   } catch(err){
     alert('Could not fetch the sheet.\n\nMake sure:\n• The sheet is shared as "Anyone with the link can view"\n• You copied the full URL from the browser address bar');
@@ -244,24 +249,77 @@ async function importFromGoogleSheets(){
 
 // ── Spreadsheet upload ────────────────────────────────────────────────────────
 
+// Holds the workbook between sheet-picker interactions
+let _pendingWb = null;
+
 function handleSheet(e){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      _importWorkbook(XLSX.read(ev.target.result, { type: 'binary' }), file.name);
+      const wb = XLSX.read(ev.target.result, { type: 'binary' });
+      const dataSheets = wb.SheetNames.filter(n => !/instructions/i.test(n));
+      if(dataSheets.length > 1){
+        _pendingWb = wb;
+        openSheetPicker(dataSheets);
+      } else {
+        _importWorkbook(wb, dataSheets[0] || wb.SheetNames[0], dataSheets[0] || wb.SheetNames[0]);
+      }
     } catch(err){
-      alert('Could not read file.\n\nMake sure you are uploading the BETR template or a CSV/Excel file with a "Student Name" column.');
+      alert('Could not read file.\n\nMake sure you are uploading the Input Template or a CSV/Excel file with a "Student Name" column.');
     }
   };
   reader.readAsBinaryString(file);
   e.target.value = '';
 }
 
-function _importWorkbook(wb, sourceName){
-  const sheetName = wb.SheetNames.find(n => !/instructions/i.test(n)) || wb.SheetNames[0];
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+function openSheetPicker(sheetNames){
+  const list = document.getElementById('sheet-picker-list');
+  list.innerHTML = sheetNames.map(name => `
+    <button class="btn btn-ghost sheet-pick-btn" style="justify-content:flex-start;text-align:left;padding:.5rem .85rem"
+      onclick="pickSheet(${JSON.stringify(name)})">
+      📄 ${name}
+    </button>`).join('');
+  document.getElementById('sheet-picker-modal').style.display = 'flex';
+}
 
+function closeSheetPicker(){
+  document.getElementById('sheet-picker-modal').style.display = 'none';
+  _pendingWb = null;
+}
+
+function pickSheet(name){
+  if(!_pendingWb) return;
+  closeSheetPicker();
+  _importWorkbook(_pendingWb, name, name);
+}
+
+function importAllSheets(){
+  if(!_pendingWb) return;
+  const sheets = _pendingWb.SheetNames.filter(n => !/instructions/i.test(n));
+  closeSheetPicker();
+
+  // Clear once if roster has existing students
+  if(students.length){
+    const replace = confirm(
+      `You have ${students.length} student${students.length !== 1 ? 's' : ''} in the current roster.\n\n` +
+      `OK = Replace roster\nCancel = Add all sheets to current roster`
+    );
+    if(replace){ students = []; selections = {}; }
+  }
+
+  let totalAdded = 0, totalSkipped = 0;
+  sheets.forEach(name => {
+    const [added, skipped] = _importSheet(_pendingWb, name);
+    totalAdded += added; totalSkipped += skipped;
+  });
+
+  alert(`Imported ${totalAdded} student${totalAdded !== 1 ? 's' : ''} from ${sheets.length} sheets.`
+    + (totalSkipped > 0 ? ` (${totalSkipped} rows skipped)` : ''));
+  saveState(); renderAll();
+}
+
+function _importWorkbook(wb, sheetName, sourceName){
   if(students.length){
     const replace = confirm(
       `You have ${students.length} student${students.length !== 1 ? 's' : ''} in the current roster.\n\n` +
@@ -269,7 +327,16 @@ function _importWorkbook(wb, sourceName){
     );
     if(replace){ students = []; selections = {}; }
   }
+  const [added, skipped] = _importSheet(wb, sheetName);
+  const msg = `Imported ${added} student${added !== 1 ? 's' : ''} from "${sourceName || sheetName}".`
+    + (skipped > 0 ? ` (${skipped} rows skipped)` : '');
+  alert(msg);
+  saveState(); renderAll();
+}
 
+// Parse one sheet and push students; returns [added, skipped]
+function _importSheet(wb, sheetName){
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName] || {}, { defval: '' });
   let added = 0, skipped = 0;
   rows.forEach(row => {
     const get = (...names) => {
@@ -293,11 +360,7 @@ function _importWorkbook(wb, sourceName){
     if(parsed.fullName){ pushStudent(parsed.fullName, nick, grade||'C', pct, prog, eff, beh, gender); added++; }
     else skipped++;
   });
-
-  const msg = `Imported ${added} student${added !== 1 ? 's' : ''} from "${sourceName || sheetName}".`
-    + (skipped > 0 ? ` (${skipped} rows skipped)` : '');
-  alert(msg);
-  saveState(); renderAll();
+  return [added, skipped];
 }
 
 // Normalise P/E/B text — case-insensitive, forgiving of minor typos
