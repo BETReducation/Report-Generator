@@ -18,6 +18,7 @@
   <button class="tab-btn active" onclick="switchTab('students',this)">1 · Students</button>
   <button class="tab-btn" onclick="switchTab('comments',this)">2 · Build Comments</button>
   <button class="tab-btn" onclick="switchTab('export',this)">3 · Export</button>
+  <button class="tab-btn" onclick="switchTab('past-reports',this)">4 · Past Reports</button>
 </div>
 
 <!-- TAB 1 · Students -->
@@ -132,15 +133,55 @@
 
 <!-- TAB 3 · Export -->
 <div id="pane-export" class="pane">
-  <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.25rem">
-    <span style="font-size:.875rem;color:var(--muted)">Review your comments, then copy or download.</span>
-    <div style="display:flex;gap:.5rem">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.25rem;flex-wrap:wrap;gap:.5rem">
+    <span style="font-size:.875rem;color:var(--muted)">Review your comments, then save, copy, or download.</span>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button id="btn-save-report" class="btn btn-ghost" onclick="openSaveModal()">💾 Save Report</button>
       <button class="btn btn-ghost" onclick="copyAll()">📋 Copy All</button>
       <button class="btn btn-primary" onclick="downloadCSV()">⬇ Download CSV</button>
     </div>
   </div>
   <div id="export-wrap">
     <div class="empty"><div class="ei">📄</div><p>Add students and build comments first.</p></div>
+  </div>
+</div>
+
+<!-- TAB 4 · Past Reports -->
+<div id="pane-past-reports" class="pane">
+  <div class="card" style="padding:.9rem 1.25rem;margin-bottom:1.25rem">
+    <span style="font-size:.875rem;color:var(--muted)">Browse and reload previously saved report sets, organised by academic year, year level, and subject.</span>
+  </div>
+  <div id="past-reports-wrap">
+    <div class="empty"><div class="ei">📁</div><p>No saved reports yet — use <strong>💾 Save Report</strong> on the Export tab.</p></div>
+  </div>
+</div>
+
+<!-- Save Report Modal -->
+<div id="save-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSaveModal()">
+  <div class="modal-box">
+    <div class="modal-title">💾 Save Report</div>
+    <div class="modal-fields">
+      <div class="fg">
+        <label>Term / Label <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input id="m-term" type="text" placeholder="e.g. Term 1, Mid-year, End of Year" onkeydown="if(event.key==='Enter')confirmSave()"/>
+      </div>
+      <div class="fg">
+        <label>Academic Year</label>
+        <select id="m-year"></select>
+      </div>
+      <div class="fg">
+        <label>Year Level</label>
+        <select id="m-level"></select>
+      </div>
+      <div class="fg">
+        <label>Subject</label>
+        <select id="m-subject"></select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeSaveModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmSave()">Save Report</button>
+    </div>
   </div>
 </div>
 
@@ -152,6 +193,8 @@
 <script src="js/render.js"></script>
 <script src="js/import.js"></script>
 <script src="js/export.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/past-reports.js"></script>
 <script src="js/app.js"></script>
 
 </body>

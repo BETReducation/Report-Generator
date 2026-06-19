@@ -5,6 +5,7 @@ function switchTab(name, btn){
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById(`pane-${name}`).classList.add('active');
   btn.classList.add('active');
+  if(name === 'past-reports') renderPastReports();
 }
 
 function ensureSel(id){
