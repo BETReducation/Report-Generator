@@ -37,6 +37,12 @@ function updateS2(id, val){
   saveState(); liveUpdate(id);
 }
 
+function newRoster(){
+  if(students.length && !confirm('Start a new roster? Your current students will be cleared.\n\nTip: save your current report first from the Export tab.')) return;
+  students = []; selections = {};
+  saveState(); renderAll();
+}
+
 function addManual(){
   const raw = document.getElementById('i-name').value.trim();
   if(!raw){ alert('Please enter a name.'); return; }

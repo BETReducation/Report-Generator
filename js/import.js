@@ -39,6 +39,10 @@ function handleSheet(e){
       const wb   = XLSX.read(ev.target.result, { type: 'binary' });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if(students.length){
+        const replace = confirm(`You have ${students.length} student${students.length !== 1 ? 's' : ''} in the current roster.\n\nOK = Replace roster with this file\nCancel = Add to current roster`);
+        if(replace){ students = []; selections = {}; }
+      }
       let added  = 0;
       rows.forEach(row => {
         const get = (...names) => {
@@ -87,6 +91,10 @@ async function handleImg(e){
       logger: m => { if(m.status === 'recognizing text') status.textContent = `⏳ OCR: ${Math.round(m.progress * 100)}%`; }
     });
     status.textContent = '✅ Done. Parsing rows...';
+    if(students.length){
+      const replace = confirm(`You have ${students.length} student${students.length !== 1 ? 's' : ''} in the current roster.\n\nOK = Replace roster with this image\nCancel = Add to current roster`);
+      if(replace){ students = []; selections = {}; }
+    }
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     let added = 0, skipped = 0;
     lines.forEach(line => {

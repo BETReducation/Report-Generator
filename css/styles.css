@@ -108,6 +108,10 @@ select.s-sel{font-size:.78rem;width:100%}
 .pr-card-icon{font-size:1.75rem;margin-bottom:.5rem}
 .pr-card-title{font-size:1rem;font-weight:700;color:var(--text)}
 .pr-card-sub{font-size:.78rem;color:var(--muted);margin-top:.25rem}
+.roster-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.roster-label{font-size:1rem;font-weight:700;color:var(--text)}
+.btn-new-roster{background:#fff;border:2px solid var(--primary);color:var(--primary);font-weight:700;padding:.42rem 1rem;border-radius:6px;cursor:pointer;font-size:.875rem;transition:all .15s}
+.btn-new-roster:hover{background:var(--primary);color:#fff}
 .pr-rename-btn{position:absolute;top:.45rem;right:.45rem;background:none;border:none;cursor:pointer;font-size:.8rem;opacity:0;transition:opacity .15s;padding:.2rem;border-radius:4px;line-height:1}
 .pr-rename-btn:hover{background:#eff6ff}
 .pr-card{position:relative}.pr-card:hover .pr-rename-btn{opacity:1}
