@@ -148,8 +148,8 @@
     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
       <button id="btn-save-report" class="btn btn-ghost" onclick="openSaveModal()">💾 Save Report</button>
       <button class="btn btn-ghost" onclick="copyAll()">📋 Copy All</button>
-      <button class="btn btn-ghost" onclick="downloadWord()">📄 Download Word</button>
-      <button class="btn btn-primary" onclick="downloadExcel()">⬇ Download Excel</button>
+      <button class="btn btn-ghost" onclick="openDownloadModal('word')">📄 Download Word</button>
+      <button class="btn btn-primary" onclick="openDownloadModal('excel')">⬇ Download Excel</button>
       <button class="btn btn-ghost" onclick="openCloudModal()">☁ Save to Cloud</button>
     </div>
   </div>
@@ -183,6 +183,31 @@
       <button class="btn btn-ghost" onclick="closeSheetPicker()">Close</button>
       <button class="btn btn-ghost" onclick="pickerNewRoster()" title="Clear current roster and start fresh">+ New Roster</button>
       <button class="btn btn-primary" onclick="importAllSheets()">Import All into One Roster</button>
+    </div>
+  </div>
+</div>
+
+<!-- Download Modal (used by Export tab Word/Excel buttons) -->
+<div id="download-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeDownloadModal()">
+  <div class="modal-box">
+    <div class="modal-title" id="dl-modal-title">⬇ Download Comments</div>
+    <div class="modal-fields">
+      <div class="fg">
+        <label>Year Level</label>
+        <select id="dl-level"></select>
+      </div>
+      <div class="fg">
+        <label>Subject</label>
+        <select id="dl-subject"></select>
+      </div>
+      <div class="fg">
+        <label>Academic Year</label>
+        <select id="dl-year"></select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeDownloadModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmDownload()">Download</button>
     </div>
   </div>
 </div>

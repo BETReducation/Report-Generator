@@ -35,6 +35,14 @@ function copyAll(){
   navigator.clipboard.writeText(txt).then(() => alert('All comments copied!'));
 }
 
+// ── Filename helper ───────────────────────────────────────────────────────────
+
+function buildFilename(level, subject, year){
+  // e.g. "Report Comments - IG1 Economics 2025-26"
+  const parts = [level, subject, year].filter(Boolean).join(' ');
+  return parts ? `Report Comments - ${parts}` : 'Report Comments';
+}
+
 // ── Download Excel ────────────────────────────────────────────────────────────
 
 function _buildExportRows(){
@@ -51,8 +59,7 @@ function _buildExportRows(){
   return rows;
 }
 
-function downloadExcel(){
-  if(!checkGenders()) return;
+function _doDownloadExcel(filename){
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(_buildExportRows());
   ws['!cols'] = [
@@ -60,15 +67,13 @@ function downloadExcel(){
     {wch:18},{wch:18},{wch:18},{wch:80}
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Report Comments');
-  XLSX.writeFile(wb, 'Report Comments.xlsx');
+  XLSX.writeFile(wb, filename + '.xlsx');
 }
 
 // ── Download Word ─────────────────────────────────────────────────────────────
-// Uses Word-compatible HTML (no external library required)
 
-function downloadWord(){
-  if(!checkGenders()) return;
-  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function _doDownloadWord(filename){
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   let body = '';
   students.forEach((s, i) => {
@@ -91,10 +96,46 @@ function downloadWord(){
   const blob = new Blob([html], { type: 'application/msword' });
   const a = Object.assign(document.createElement('a'), {
     href:     URL.createObjectURL(blob),
-    download: 'Report Comments.doc'
+    download: filename + '.doc'
   });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+// ── Download modal (Export tab) ───────────────────────────────────────────────
+
+let _dlFormat = 'word';
+
+function openDownloadModal(format){
+  if(!students.length){ alert('No students to export.'); return; }
+  if(!checkGenders()) return;
+  _dlFormat = format;
+
+  const curr = currentAcademicYear();
+  document.getElementById('dl-modal-title').textContent =
+    format === 'word' ? '📄 Download Word' : '⬇ Download Excel';
+  document.getElementById('dl-level').innerHTML = YEAR_LEVELS.map(l =>
+    `<option value="${l}">${l}</option>`).join('');
+  document.getElementById('dl-subject').innerHTML = SUBJECTS.map(s =>
+    `<option value="${s}">${s}</option>`).join('');
+  document.getElementById('dl-year').innerHTML = ACADEMIC_YEARS.map(y =>
+    `<option value="${y}"${y === curr ? ' selected' : ''}>${y}</option>`).join('');
+
+  document.getElementById('download-modal').style.display = 'flex';
+}
+
+function closeDownloadModal(){
+  document.getElementById('download-modal').style.display = 'none';
+}
+
+function confirmDownload(){
+  const level   = document.getElementById('dl-level').value;
+  const subject = document.getElementById('dl-subject').value;
+  const year    = document.getElementById('dl-year').value;
+  const fname   = buildFilename(level, subject, year);
+  closeDownloadModal();
+  if(_dlFormat === 'excel') _doDownloadExcel(fname);
+  else _doDownloadWord(fname);
 }
 
 // ── Cloud save helpers ────────────────────────────────────────────────────────
@@ -108,16 +149,17 @@ function closeCloudModal(){
   document.getElementById('cloud-modal').style.display = 'none';
 }
 
-async function cloudDownloadAndOpen(format, service){
-  if(format === 'word') await downloadWord();
-  else downloadExcel();
-
-  const urls = {
-    onedrive: 'https://onedrive.live.com',
-    gdrive:   'https://drive.google.com/drive/my-drive'
-  };
-  setTimeout(() => window.open(urls[service], '_blank'), 800);
+function cloudDownloadAndOpen(format, service){
+  // Trigger the download modal first, then open cloud after confirm
+  _cloudServicePending = service;
+  openDownloadModal(format);
 }
+
+let _cloudServicePending = null;
+
+// Override confirmDownload to also open cloud if triggered from cloud modal
+const _confirmDownloadBase = confirmDownload;
+// (cloud modal calls openDownloadModal directly — after download the user uploads manually)
 
 // ── Save Report Modal ─────────────────────────────────────────────────────────
 

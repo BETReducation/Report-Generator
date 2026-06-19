@@ -296,7 +296,7 @@ function prDownloadReport(id){
     body += `<p>${esc(comment)}</p>`;
   });
 
-  const label    = [r.subject, r.yearLevel, r.term, r.academicYear].filter(Boolean).join(' - ');
+  const label    = buildFilename(r.yearLevel, r.subject, r.academicYear);
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
     xmlns:w="urn:schemas-microsoft-com:office:word"
     xmlns="http://www.w3.org/TR/REC-html40">
@@ -307,7 +307,7 @@ function prDownloadReport(id){
   const blob = new Blob([html], { type: 'application/msword' });
   const a = Object.assign(document.createElement('a'), {
     href:     URL.createObjectURL(blob),
-    download: `${label}.doc`
+    download: label + '.doc'
   });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
