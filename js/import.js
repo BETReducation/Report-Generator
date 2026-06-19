@@ -1,111 +1,212 @@
 // Spreadsheet import and Excel template generation.
-// Data validation + cell styling is injected via JSZip because SheetJS
-// community edition does not support these features natively.
+// xlsx is built entirely from scratch using JSZip so there is no round-trip
+// through SheetJS that could corrupt internal zip structure.
 
 // ── Template download ─────────────────────────────────────────────────────────
 
 async function downloadTemplate(){
-  const wb = XLSX.utils.book_new();
+  // Shared-string table: intern every text value, return its index
+  const sst = [], sstMap = {};
+  function S(v){
+    if(v === null || v === undefined || v === '') return null;
+    const s = String(v);
+    if(!(s in sstMap)){ sstMap[s] = sst.length; sst.push(s); }
+    return sstMap[s];
+  }
+  // XML-safe escape
+  const xs = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Cell helpers — must be called in order so S() populates sst before sharedStrings is built
+  const sc = (r, v, si) => {        // string cell with style index si
+    const i = S(v);
+    return i === null
+      ? `<c r="${r}" s="${si}"/>`
+      : `<c r="${r}" s="${si}" t="s"><v>${i}</v></c>`;
+  };
+  const nc = (r, v, si) => `<c r="${r}" s="${si}"><v>${v}</v></c>`; // number cell
+  const tc = (r, v) => {            // plain text cell (Instructions sheet, no style)
+    const i = S(v); return i === null ? '' : `<c r="${r}" t="s"><v>${i}</v></c>`;
+  };
+
+  const COLS = 'ABCDEFGH';
+  const PEB  = 'Needs Improvement,Satisfactory,Good,Very Good';
 
   // ── Student Data sheet ─────────────────────────────────────────────────────
-  const headers = ['Student Name', 'Nickname', 'Gender', 'Grade', '%', 'Progress', 'Effort', 'Behaviour'];
-  // Example rows are prefixed with [EXAMPLE] so handleSheet() will skip them automatically
-  const ex1 = ['[EXAMPLE] Le Thanh Hung (Nancy)', 'Nancy', 'F', 'A', '87', 'Very Good', 'Good', 'Very Good'];
-  const ex2 = ['[EXAMPLE] Araki Shoei', '', 'M', 'B', '72', 'Good', 'Satisfactory', 'Good'];
+  const HDRS = ['Student Name','Nickname','Gender','Grade','%','Progress','Effort','Behaviour'];
+  const hdrRow   = HDRS.map((h,i) => sc(COLS[i]+'1', h, 1)).join('');
+  const exRow1   = [
+    sc('A2','[EXAMPLE] Le Thanh Hung (Nancy)',2), sc('B2','Nancy',2),
+    sc('C2','F',2), sc('D2','A',2), nc('E2',87,2),
+    sc('F2','Very Good',2), sc('G2','Good',2), sc('H2','Very Good',2),
+  ].join('');
+  const exRow2   = [
+    sc('A3','[EXAMPLE] Araki Shoei',2), sc('B3','',2),
+    sc('C3','M',2), sc('D3','B',2), nc('E3',72,2),
+    sc('F3','Good',2), sc('G3','Satisfactory',2), sc('H3','Good',2),
+  ].join('');
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ex1, ex2]);
-  ws['!cols'] = [
-    { wch: 36 }, { wch: 14 }, { wch: 9 }, { wch: 8 },
-    { wch: 7  }, { wch: 20 }, { wch: 20 }, { wch: 20 },
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, 'Student Data');
+  const sheet1 = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView tabSelected="1" workbookViewId="0">
+<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>
+</sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>
+<col min="1" max="1" width="36" customWidth="1"/>
+<col min="2" max="2" width="14" customWidth="1"/>
+<col min="3" max="3" width="9" customWidth="1"/>
+<col min="4" max="4" width="8" customWidth="1"/>
+<col min="5" max="5" width="7" customWidth="1"/>
+<col min="6" max="6" width="20" customWidth="1"/>
+<col min="7" max="7" width="20" customWidth="1"/>
+<col min="8" max="8" width="20" customWidth="1"/>
+</cols>
+<sheetData>
+<row r="1" ht="20" customHeight="1" s="1" customFormat="1">${hdrRow}</row>
+<row r="2" s="2" customFormat="1">${exRow1}</row>
+<row r="3" s="2" customFormat="1">${exRow2}</row>
+</sheetData>
+<dataValidations count="5">
+<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="C2:C3000"><formula1>"M,F"</formula1></dataValidation>
+<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="D2:D3000"><formula1>"A*,A,B,C,D,E,F,G"</formula1></dataValidation>
+<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="F2:F3000"><formula1>"${PEB}"</formula1></dataValidation>
+<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="G2:G3000"><formula1>"${PEB}"</formula1></dataValidation>
+<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="H2:H3000"><formula1>"${PEB}"</formula1></dataValidation>
+</dataValidations>
+</worksheet>`;
 
   // ── Instructions sheet ─────────────────────────────────────────────────────
-  const instrRows = [
-    ['BETR Report Generator — Class Data Template'],
-    [''],
-    ['HOW TO USE THIS TEMPLATE'],
-    ['1. Delete the two [EXAMPLE] rows in the "Student Data" tab.'],
-    ['2. Fill in your class — use the dropdown menus for Gender, Grade, Progress, Effort & Behaviour.'],
-    ['3. Excel: File → Save As → Excel Workbook (.xlsx)'],
-    ['   Google Sheets: File → Download → Microsoft Excel (.xlsx)  or  → CSV'],
-    ['4. Upload the completed file to the Report Generator website.'],
-    [''],
-    ['COLUMN GUIDE'],
-    ['Column', 'Description', 'Valid values'],
-    ['Student Name', 'Full legal name. Put nickname in brackets: Le Thanh Hung (Nancy)', 'Any text'],
-    ['Nickname', 'Optional — leave blank for automatic short-name rules.', 'Any text'],
-    ['Gender', 'Required to generate comments.', 'M  or  F'],
-    ['Grade', 'Achieved grade for this reporting period.', 'A*, A, B, C, D, E, F, G'],
-    ['%', 'Percentage score — no % symbol needed.', '0 – 100'],
-    ['Progress', 'Progress rating for the term.', 'Needs Improvement / Satisfactory / Good / Very Good'],
-    ['Effort', 'Effort rating for the term.', 'Needs Improvement / Satisfactory / Good / Very Good'],
-    ['Behaviour', 'Behaviour rating for the term.', 'Needs Improvement / Satisfactory / Good / Very Good'],
-    [''],
-    ['TIPS'],
-    ['• Gender, Grade, Progress, Effort and Behaviour columns have dropdown menus in Excel.'],
-    ['• Names with nicknames in brackets — Le Thanh Hung (Nancy) — are parsed automatically.'],
-    ['• P/E/B are optional but drive auto sentence selection on the website.'],
-    ['• Text matching is case-insensitive — "very good" and "Very Good" both work.'],
+  const instrData = [
+    ['BETR Report Generator — Class Data Template','',''],
+    ['','',''],
+    ['HOW TO USE THIS TEMPLATE','',''],
+    ['1. Delete the two [EXAMPLE] rows in the “Student Data” tab.','',''],
+    ['2. Fill in your class — use the dropdowns for Gender, Grade, Progress, Effort & Behaviour.','',''],
+    ['3. Excel: File → Save As → Excel Workbook (.xlsx)','',''],
+    ['   Google Sheets: File → Download → Microsoft Excel (.xlsx)  or  → CSV','',''],
+    ['4. Upload the completed file to the Report Generator website.','',''],
+    ['','',''],
+    ['COLUMN GUIDE','',''],
+    ['Column','Description','Valid values'],
+    ['Student Name','Full legal name. Put nickname in brackets: Le Thanh Hung (Nancy)','Any text'],
+    ['Nickname','Optional — leave blank for automatic short-name rules.','Any text'],
+    ['Gender','Required to generate comments.','M  or  F'],
+    ['Grade','Achieved grade for this reporting period.','A*, A, B, C, D, E, F, G'],
+    ['%','Percentage score — no % symbol needed.','0–100'],
+    ['Progress','Progress rating for the term.','Needs Improvement / Satisfactory / Good / Very Good'],
+    ['Effort','Effort rating for the term.','Needs Improvement / Satisfactory / Good / Very Good'],
+    ['Behaviour','Behaviour rating for the term.','Needs Improvement / Satisfactory / Good / Very Good'],
+    ['','',''],
+    ['TIPS','',''],
+    ['• Gender, Grade, Progress, Effort and Behaviour columns have dropdown menus in Excel.','',''],
+    ['• Names with nicknames in brackets — Le Thanh Hung (Nancy) — are parsed automatically.','',''],
+    ['• P/E/B are optional but drive auto sentence selection on the website.','',''],
+    ['• Text matching is case-insensitive — "very good" and "Very Good" both work.','',''],
   ];
-  const wsI = XLSX.utils.aoa_to_sheet(instrRows);
-  wsI['!cols'] = [{ wch: 18 }, { wch: 60 }, { wch: 42 }];
-  XLSX.utils.book_append_sheet(wb, wsI, 'Instructions');
+  const instrRows = instrData.map((row, ri) => {
+    const cells = ['A','B','C'].map((col, ci) => tc(col+(ri+1), row[ci])).join('');
+    return cells ? `<row r="${ri+1}">${cells}</row>` : '';
+  }).filter(Boolean).join('\n');
 
-  // ── Write base workbook ────────────────────────────────────────────────────
-  const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const sheet2 = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>
+<col min="1" max="1" width="18" customWidth="1"/>
+<col min="2" max="2" width="60" customWidth="1"/>
+<col min="3" max="3" width="42" customWidth="1"/>
+</cols>
+<sheetData>${instrRows}</sheetData>
+</worksheet>`;
 
-  // ── Inject data validations via JSZip ─────────────────────────────────────
-  try {
-    const zip = await JSZip.loadAsync(arr);
+  // ── Shared strings (built after all S() calls above) ──────────────────────
+  const sharedStrings = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sst.length}" uniqueCount="${sst.length}">
+${sst.map(s => `<si><t xml:space="preserve">${xs(s)}</t></si>`).join('\n')}
+</sst>`;
 
-    // Read sheet1.xml as binary string (JSZip uses Latin-1; for ASCII-only
-    // modifications this is identical to UTF-8 so no encoding issues arise)
-    let s1 = await zip.file('xl/worksheets/sheet1.xml').async('string');
+  // ── Styles ─────────────────────────────────────────────────────────────────
+  // xf 0=default, 1=header (blue bg, white bold), 2=example row (light blue tint)
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2">
+<font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>
+</fonts>
+<fills count="4">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF1D4ED8"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="3">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
 
-    // Append dataValidations immediately before </worksheet>
-    if (!s1.includes('<dataValidations')) {
-      const pebList = '"Needs Improvement,Satisfactory,Good,Very Good"';
-      const dvBlock =
-        '<dataValidations count="5">' +
-        dv('C2:C3000', '"M,F"') +
-        dv('D2:D3000', '"A*,A,B,C,D,E,F,G"') +
-        dv('F2:F3000', pebList) +
-        dv('G2:G3000', pebList) +
-        dv('H2:H3000', pebList) +
-        '</dataValidations>';
-      // Use lastIndexOf so we replace only the final </worksheet> tag
-      const idx = s1.lastIndexOf('</worksheet>');
-      if (idx !== -1) s1 = s1.slice(0, idx) + dvBlock + '</worksheet>';
-    }
+  // ── Package XML ────────────────────────────────────────────────────────────
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
 
-    zip.file('xl/worksheets/sheet1.xml', s1);
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
 
-    const blob = await zip.generateAsync({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      compression: 'DEFLATE',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'BETR_Class_Template.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<bookViews><workbookView activeTab="0"/></bookViews>
+<sheets>
+<sheet name="Student Data" sheetId="1" r:id="rId1"/>
+<sheet name="Instructions" sheetId="2" r:id="rId2"/>
+</sheets>
+</workbook>`;
 
-  } catch (err) {
-    console.error('[Template]', err);
-    // Fallback: plain xlsx without dropdowns
-    XLSX.writeFile(wb, 'BETR_Class_Template.xlsx');
-  }
-}
+  const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
 
-// Build a dataValidation XML element for a list dropdown
-function dv(sqref, formula1){
-  return `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="${sqref}">` +
-         `<formula1>${formula1}</formula1></dataValidation>`;
+  // ── Assemble zip and download ──────────────────────────────────────────────
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypes);
+  zip.file('_rels/.rels', rootRels);
+  zip.file('xl/workbook.xml', workbook);
+  zip.file('xl/_rels/workbook.xml.rels', workbookRels);
+  zip.file('xl/worksheets/sheet1.xml', sheet1);
+  zip.file('xl/worksheets/sheet2.xml', sheet2);
+  zip.file('xl/sharedStrings.xml', sharedStrings);
+  zip.file('xl/styles.xml', styles);
+
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    compression: 'DEFLATE',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'BETR_Class_Template.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 // ── Google Sheets import ──────────────────────────────────────────────────────
