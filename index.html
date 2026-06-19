@@ -170,14 +170,17 @@
 <div id="sheet-picker-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSheetPicker()">
   <div class="modal-box">
     <div class="modal-title">📋 Multiple Class Sheets Found</div>
-    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">
-      This file has several sheets. Click a sheet to load it as your current roster,
-      or use <strong>Import All</strong> to combine every class into one list.
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">
+      Click a sheet to load it as the current roster. The picker stays open so you can
+      import each class in turn — use <strong>New Roster</strong> between classes to
+      keep them separate, or <strong>Import All</strong> to combine everything.
     </p>
-    <div id="sheet-picker-list" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.1rem"></div>
+    <div id="sheet-picker-list" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem"></div>
+    <div id="sheet-picker-status" style="font-size:.8rem;color:var(--success);min-height:1.2em;margin-bottom:.5rem"></div>
     <div class="modal-btns">
-      <button class="btn btn-ghost" onclick="closeSheetPicker()">Cancel</button>
-      <button class="btn btn-primary" id="sheet-picker-all-btn" onclick="importAllSheets()">Import All into One Roster</button>
+      <button class="btn btn-ghost" onclick="closeSheetPicker()">Close</button>
+      <button class="btn btn-ghost" onclick="pickerNewRoster()" title="Clear current roster and start fresh">+ New Roster</button>
+      <button class="btn btn-primary" onclick="importAllSheets()">Import All into One Roster</button>
     </div>
   </div>
 </div>

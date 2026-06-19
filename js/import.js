@@ -276,10 +276,13 @@ function handleSheet(e){
 function openSheetPicker(sheetNames){
   const list = document.getElementById('sheet-picker-list');
   list.innerHTML = sheetNames.map(name => `
-    <button class="btn btn-ghost sheet-pick-btn" style="justify-content:flex-start;text-align:left;padding:.5rem .85rem"
+    <button class="btn btn-ghost sheet-pick-btn" data-sheet=${JSON.stringify(name)}
+      style="justify-content:flex-start;text-align:left;padding:.5rem .85rem"
       onclick="pickSheet(${JSON.stringify(name)})">
       📄 ${name}
     </button>`).join('');
+  const status = document.getElementById('sheet-picker-status');
+  if(status) status.textContent = '';
   document.getElementById('sheet-picker-modal').style.display = 'flex';
 }
 
@@ -288,15 +291,45 @@ function closeSheetPicker(){
   _pendingWb = null;
 }
 
+function pickerNewRoster(){
+  if(students.length && !confirm('Clear the current roster and start fresh?')) return;
+  students = []; selections = {};
+  saveState(); renderAll();
+  const status = document.getElementById('sheet-picker-status');
+  if(status) status.textContent = 'Roster cleared — ready for next class.';
+}
+
 function pickSheet(name){
   if(!_pendingWb) return;
-  closeSheetPicker();
-  _importWorkbook(_pendingWb, name, name);
+
+  if(students.length){
+    const replace = confirm(
+      `You have ${students.length} student${students.length !== 1 ? 's' : ''} in the current roster.\n\n` +
+      `OK = Replace roster\nCancel = Add to current roster`
+    );
+    if(replace){ students = []; selections = {}; }
+  }
+
+  const [added, skipped] = _importSheet(_pendingWb, name);
+  saveState(); renderAll();
+
+  // Mark button as done — keep modal open for next sheet
+  const btn = document.querySelector(`.sheet-pick-btn[data-sheet=${JSON.stringify(name)}]`);
+  if(btn){
+    btn.disabled = true;
+    btn.style.cssText += ';background:#dcfce7;border-color:#059669;color:#059669;opacity:1';
+    btn.textContent = `✓ ${name} — ${added} student${added !== 1 ? 's' : ''} imported`;
+  }
+  const status = document.getElementById('sheet-picker-status');
+  if(status) status.textContent =
+    `"${name}" imported (${added} student${added !== 1 ? 's' : ''}${skipped ? `, ${skipped} skipped` : ''}).`
+    + ' Click another sheet or close.';
 }
 
 function importAllSheets(){
   if(!_pendingWb) return;
   const sheets = _pendingWb.SheetNames.filter(n => !/instructions/i.test(n));
+  const wb = _pendingWb;
   closeSheetPicker();
 
   // Clear once if roster has existing students
@@ -310,7 +343,7 @@ function importAllSheets(){
 
   let totalAdded = 0, totalSkipped = 0;
   sheets.forEach(name => {
-    const [added, skipped] = _importSheet(_pendingWb, name);
+    const [added, skipped] = _importSheet(wb, name);
     totalAdded += added; totalSkipped += skipped;
   });
 
