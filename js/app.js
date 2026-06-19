@@ -59,7 +59,8 @@ function addManual(){
     gender ? gender.value : ''
   );
   ['i-name', 'i-nick', 'i-pct'].forEach(id => document.getElementById(id).value = '');
-  ['i-prog', 'i-effort', 'i-beh'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('i-grade').selectedIndex = 0;
+  ['i-prog', 'i-effort', 'i-beh'].forEach(id => document.getElementById(id).selectedIndex = 0);
   const checked = document.querySelector('input[name="i-gender"]:checked');
   if(checked) checked.checked = false;
   document.getElementById('i-name').focus();

@@ -104,6 +104,12 @@
         <p style="margin-top:.4rem;font-size:.72rem">Click to choose file</p>
       </label>
     </div>
+    <div class="gs-row">
+      <span class="gs-label">Or paste a Google Sheets link:</span>
+      <input id="gs-url" type="url" placeholder="https://docs.google.com/spreadsheets/d/…" />
+      <button id="gs-btn" class="btn btn-primary btn-sm" onclick="importFromGoogleSheets()">Import</button>
+    </div>
+    <p class="hint" style="margin-top:.5rem">The sheet must be shared as <em>Anyone with the link can view</em>.</p>
   </div>
 
   <div class="card">
