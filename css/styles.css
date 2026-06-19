@@ -108,6 +108,9 @@ select.s-sel{font-size:.78rem;width:100%}
 .pr-card-icon{font-size:1.75rem;margin-bottom:.5rem}
 .pr-card-title{font-size:1rem;font-weight:700;color:var(--text)}
 .pr-card-sub{font-size:.78rem;color:var(--muted);margin-top:.25rem}
+.pr-rename-btn{position:absolute;top:.45rem;right:.45rem;background:none;border:none;cursor:pointer;font-size:.8rem;opacity:0;transition:opacity .15s;padding:.2rem;border-radius:4px;line-height:1}
+.pr-rename-btn:hover{background:#eff6ff}
+.pr-card{position:relative}.pr-card:hover .pr-rename-btn{opacity:1}
 .pr-report-card{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:.75rem;overflow:hidden}
 .pr-report-hdr{display:flex;justify-content:space-between;align-items:center;padding:.85rem 1rem;flex-wrap:wrap;gap:.5rem}
 .pr-report-title{font-weight:600;font-size:.9rem;color:var(--text)}

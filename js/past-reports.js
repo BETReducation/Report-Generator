@@ -86,6 +86,7 @@ function buildTermGrid(reports){
   return `<div class="pr-grid">
     ${sorted.map(t => `
       <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(t)},null,null)">
+        <button class="pr-rename-btn" onclick="event.stopPropagation();prRenameTerm(${prEsc(prNav.year)},${prEsc(t)})" title="Rename term">✏️</button>
         <div class="pr-card-icon">${icons[t] || '📋'}</div>
         <div class="pr-card-title">${t}</div>
         <div class="pr-card-sub">${counts[t]} report${counts[t] !== 1 ? 's' : ''}</div>
@@ -183,6 +184,15 @@ function buildReportList(reports){
 
 function prSetNav(year, term, level, subject){
   prNav = { year, term, level, subject };
+  renderPastReports();
+}
+
+function prRenameTerm(year, term){
+  const newName = prompt(`Rename "${term}" to:`, term);
+  if(!newName || newName.trim() === '' || newName.trim() === term) return;
+  renameTerm(year, term, newName.trim());
+  // If we're currently navigated into this term, update the nav state
+  if(prNav.term === term) prNav.term = newName.trim();
   renderPastReports();
 }
 

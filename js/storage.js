@@ -52,6 +52,16 @@ function saveReport(meta){
   return report;
 }
 
+function renameTerm(year, oldTerm, newTerm){
+  const reports = getSavedReports().map(r => {
+    if(r.academicYear === year && (r.term || 'Unlabelled') === oldTerm){
+      return Object.assign({}, r, { term: newTerm });
+    }
+    return r;
+  });
+  localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
+}
+
 function deleteSavedReport(id){
   if(!confirm('Delete this saved report? This cannot be undone.')) return;
   const reports = getSavedReports().filter(r => r.id !== id);
