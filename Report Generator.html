@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IGCSE Report Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --primary:#2563eb;--primary-dk:#1d4ed8;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;
+  --success:#059669;--warn:#d97706;--danger:#dc2626;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.hdr{background:var(--primary);color:#fff;padding:.9rem 2rem}
+.hdr h1{font-size:1.2rem;font-weight:700}.hdr p{font-size:.8rem;opacity:.8;margin-top:.15rem}
+.tabs{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 2rem}
+.tab-btn{padding:.7rem 1.2rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;font-weight:500;transition:all .15s}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-btn:hover:not(.active){color:var(--text)}
+.pane{display:none;padding:1.5rem 2rem;max-width:1500px;margin:0 auto}
+.pane.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.card-title{font-size:.95rem;font-weight:600;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.form-row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:.25rem}
+.fg label{font-size:.75rem;font-weight:500;color:var(--muted)}
+input,select{padding:.42rem .6rem;border:1px solid var(--border);border-radius:6px;font-size:.875rem;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.12)}
+.btn{padding:.42rem .9rem;border-radius:6px;border:none;cursor:pointer;font-size:.85rem;font-weight:500;transition:background .15s}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dk)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-ghost:hover{background:var(--bg)}
+.btn-sm{padding:.28rem .6rem;font-size:.78rem}
+.btn-red{background:transparent;border:1px solid var(--danger);color:var(--danger)}.btn-red:hover{background:#fef2f2}
+.btn-auto{background:#eff6ff;border:1px solid #bfdbfe;color:var(--primary);font-weight:600}
+.btn-auto.active{background:var(--primary);color:#fff}
+.btn-manual{background:#f8fafc;border:1px solid var(--border);color:var(--muted)}
+.btn-manual.active{background:#1e293b;color:#fff}
+table{width:100%;border-collapse:collapse}
+thead tr{background:#f8fafc}
+th{padding:.6rem .7rem;text-align:left;font-size:.78rem;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.6rem .7rem;font-size:.82rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+.badge{display:inline-block;padding:.18rem .5rem;border-radius:4px;font-size:.72rem;font-weight:700}
+.bA{background:#d1fae5;color:#065f46}.bB{background:#fef3c7;color:#92400e}.bC{background:#fee2e2;color:#991b1b}
+.peb-vg{color:#059669;font-weight:600;font-size:.78rem}
+.peb-g{color:#2563eb;font-size:.78rem}
+.peb-s{color:#d97706;font-size:.78rem}
+.peb-ni{color:#dc2626;font-weight:600;font-size:.78rem}
+.gender-btn{padding:.22rem .55rem;font-size:.78rem;font-weight:700;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:#f8fafc;color:var(--muted);transition:all .15s}
+.gender-btn:hover{border-color:var(--primary);color:var(--primary)}
+.gender-btn.active-m{background:#dbeafe;border-color:#3b82f6;color:#1d4ed8}
+.gender-btn.active-f{background:#fce7f3;border-color:#ec4899;color:#be185d}
+.gender-radio{display:flex;align-items:center;gap:.75rem}
+.gender-radio label{display:flex;align-items:center;gap:.3rem;cursor:pointer;font-size:.875rem;font-weight:500}
+.gender-radio input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:var(--primary)}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.upload-box{border:2px dashed var(--border);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;background:#f8fafc;transition:border-color .15s,background .15s;display:block}
+.upload-box:hover{border-color:var(--primary);background:#eff6ff}
+.upload-box input[type=file]{display:none}
+.upload-box .icon{font-size:1.6rem;margin-bottom:.4rem}
+.upload-box strong{font-size:.875rem}
+.upload-box p{font-size:.75rem;color:var(--muted);margin-top:.2rem}
+.tag-viet{font-size:.68rem;background:#eff6ff;color:var(--primary);border-radius:3px;padding:.1rem .35rem;border:1px solid #bfdbfe}
+.tag-short{font-size:.68rem;background:#f0fdf4;color:#166534;border-radius:3px;padding:.1rem .35rem;border:1px solid #bbf7d0}
+.sc-card{border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;margin-bottom:1rem;background:#fff}
+.sc-hdr{display:flex;align-items:center;gap:.6rem;margin-bottom:.85rem;flex-wrap:wrap}
+.sc-name{font-weight:600;font-size:.95rem}
+.mode-toggle{display:flex;gap:.3rem;border:1px solid var(--border);border-radius:6px;padding:.2rem;background:#f8fafc;margin-left:auto}
+.mode-btn{padding:.25rem .65rem;font-size:.75rem;font-weight:600;border:none;border-radius:4px;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted)}
+.mode-btn.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.peb-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem;padding:.5rem .65rem;background:#f8fafc;border-radius:6px;font-size:.78rem}
+.peb-item{display:flex;align-items:center;gap:.3rem}
+.peb-label{color:var(--muted);font-weight:500}
+.s-row{display:grid;grid-template-columns:120px 1fr;gap:.5rem;align-items:center;margin-bottom:.45rem}
+.s-lbl{font-size:.72rem;font-weight:600;color:var(--muted)}
+.s-lbl small{display:block;font-weight:400;font-size:.65rem;color:#94a3b8}
+select.s-sel{font-size:.78rem;width:100%}
+.s-row.auto-row .s-sel{background:#f0fdf4;border-color:#86efac}
+.auto-tag{font-size:.65rem;background:#dcfce7;color:#166534;border-radius:3px;padding:.1rem .3rem;margin-left:.25rem}
+.preview{background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:.75rem;font-size:.84rem;line-height:1.58;margin-top:.75rem;min-height:56px}
+.sc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem}
+.cc{font-size:.75rem;font-weight:500}
+.cc.good{color:var(--success)}.cc.near{color:var(--warn)}.cc.over{color:var(--danger)}.cc.low{color:var(--muted)}
+.exp-card{border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:.75rem;background:#fff}
+.exp-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+.exp-name{font-weight:600;font-size:.875rem}
+.exp-txt{font-size:.85rem;line-height:1.6}
+.empty{text-align:center;padding:3rem;color:var(--muted)}
+.empty .ei{font-size:2.2rem;margin-bottom:.5rem}
+.hint{font-size:.75rem;color:var(--muted);margin-top:.6rem}
+#ocr-status{font-size:.8rem;color:var(--muted);margin-top:.6rem;display:none}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+@media(max-width:700px){.upload-grid{grid-template-columns:1fr}.s-row{grid-template-columns:1fr}.pane{padding:1rem}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>IGCSE Report Generator</h1>
+  <p>Individualised student comments · 330–350 character target · Smart Vietnamese name handling</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('students',this)">1 · Students</button>
+  <button class="tab-btn" onclick="switchTab('comments',this)">2 · Build Comments</button>
+  <button class="tab-btn" onclick="switchTab('export',this)">3 · Export</button>
+</div>
+
+<!-- TAB 1 -->
+<div id="pane-students" class="pane active">
+
+  <div class="card">
+    <div class="card-title">Add Student Manually</div>
+    <div class="form-row">
+      <div class="fg" style="flex:2;min-width:170px">
+        <label>Full Vietnamese / Legal Name</label>
+        <input id="i-name" type="text" placeholder="e.g. Le Thanh Hung" onkeydown="if(event.key==='Enter')addManual()"/>
+      </div>
+      <div class="fg" style="flex:1;min-width:100px">
+        <label>Nickname (optional)</label>
+        <input id="i-nick" type="text" placeholder="e.g. Alex" onkeydown="if(event.key==='Enter')addManual()"/>
+      </div>
+      <div class="fg">
+        <label>Grade</label>
+        <select id="i-grade">
+          <option>A+</option><option>A</option><option>B</option><option>C</option>
+        </select>
+      </div>
+      <div class="fg" style="width:65px">
+        <label>%</label>
+        <input id="i-pct" type="number" placeholder="74" min="0" max="100"/>
+      </div>
+      <div class="fg">
+        <label>Progress</label>
+        <select id="i-prog">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Effort</label>
+        <select id="i-effort">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Behaviour</label>
+        <select id="i-beh">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Gender <span style="color:var(--danger)">*</span></label>
+        <div class="gender-radio">
+          <label><input type="radio" name="i-gender" value="M"/> Male</label>
+          <label><input type="radio" name="i-gender" value="F"/> Female</label>
+        </div>
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addManual()">+ Add</button>
+      </div>
+    </div>
+    <p class="hint">Tip: Paste names with nicknames already in brackets — <em>Le Thanh Hung (Alex)</em> — extracted automatically. Progress/Effort/Behaviour drive auto comment selection in Tab 2.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Import from Spreadsheet or Image</div>
+    <div class="upload-grid">
+      <label class="upload-box">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleSheet(event)"/>
+        <div class="icon">📊</div>
+        <strong>Upload Spreadsheet</strong>
+        <p>Excel (.xlsx / .xls) or CSV</p>
+        <p>Columns: Name, Grade; optional: Nickname, %, Progress, Effort, Behaviour</p>
+      </label>
+      <label class="upload-box">
+        <input type="file" accept="image/*" onchange="handleImg(event)"/>
+        <div class="icon">🖼️</div>
+        <strong>Upload Image / Screenshot</strong>
+        <p>Extracts names &amp; grades via OCR</p>
+        <p>Review roster carefully after — OCR may merge words</p>
+      </label>
+    </div>
+    <div id="ocr-status"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <span style="font-weight:600;font-size:.95rem">Student Roster (<span id="s-count">0</span>)</span>
+      <button class="btn btn-red btn-sm" onclick="clearAll()">Clear All</button>
+    </div>
+    <div id="roster-wrap">
+      <div class="empty"><div class="ei">👨‍🎓</div><p>No students yet — add one above or import a file.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TAB 2 -->
+<div id="pane-comments" class="pane">
+  <div class="toolbar">
+    <span style="font-size:.85rem;color:var(--muted)">
+      <strong>Auto mode</strong> selects sentences from Progress, Effort &amp; Behaviour. Switch to <strong>Manual</strong> to pick your own. Target: 330–350 chars.
+    </span>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-ghost btn-sm" onclick="setAllMode('auto')">⚡ Auto-fill All</button>
+      <button class="btn btn-ghost btn-sm" onclick="setAllMode('manual')">✏️ All Manual</button>
+    </div>
+  </div>
+  <div id="comments-wrap">
+    <div class="empty"><div class="ei">✏️</div><p>Add students in Tab 1 first.</p></div>
+  </div>
+</div>
+
+<!-- TAB 3 -->
+<div id="pane-export" class="pane">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.25rem">
+    <span style="font-size:.875rem;color:var(--muted)">Review your comments, then copy or download.</span>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-ghost" onclick="copyAll()">📋 Copy All</button>
+      <button class="btn btn-primary" onclick="downloadCSV()">⬇ Download CSV</button>
+    </div>
+  </div>
+  <div id="export-wrap">
+    <div class="empty"><div class="ei">📄</div><p>Add students and build comments first.</p></div>
+  </div>
+</div>
+
+<script>
+// ── COMMENT BANK ─────────────────────────────────────────────────────────────
+const BANK = {
+  A: {
+    s1:[
+      "[FULL_NAME] has delivered an outstanding performance in IGCSE Economics this term.",
+      "[FULL_NAME] has excelled this term, demonstrating exceptional analytical ability in Economics.",
+      "[FULL_NAME] has produced exemplary work in IGCSE Economics throughout this term.",
+      "[FULL_NAME] consistently demonstrates brilliant insight into economic theory and practice.",
+      "[FULL_NAME] has been a standout student, achieving an excellent standard across all units."
+    ],
+    s2_academic:[
+      "[SHORT_NAME] should refine essay structure to fully maximise marks on extended response questions.",
+      "[SHORT_NAME] can improve further by strengthening critical evaluation skills in exam responses.",
+      "[SHORT_NAME] would benefit from linking economic models more explicitly to real-world case studies.",
+      "[SHORT_NAME] should aim for greater precision with technical definitions under exam pressure.",
+      "[SHORT_NAME] is encouraged to explore alternative economic perspectives more thoroughly in answers."
+    ],
+    s2_effort:[
+      "[SHORT_NAME] should ensure that strong classroom performance is matched by equally diligent independent study.",
+      "[SHORT_NAME] would reach an even higher standard by investing more time in self-directed revision.",
+      "[SHORT_NAME] is encouraged to push further through independent reading and regular exam practice.",
+      "[SHORT_NAME] must ensure that effort outside the classroom matches the quality shown in assessments.",
+      "[SHORT_NAME] can unlock [THEIR] full potential by committing more consistently to independent study."
+    ],
+    s2_behaviour:[
+      "[SHORT_NAME] should sustain their high standard of conduct and remain fully focused in all lessons.",
+      "[SHORT_NAME] is encouraged to channel energy productively and remain consistently engaged in class.",
+      "[SHORT_NAME] should maintain focus and avoid distractions to ensure their excellent ability is realised.",
+      "[SHORT_NAME] must ensure classroom conduct consistently matches their impressive academic ability.",
+      "[SHORT_NAME] is reminded to maintain a professional and focused approach during all learning activities."
+    ],
+    s3:[
+      "A superb term — with this dedication, a top final grade is firmly within reach.",
+      "With this level of commitment, [SHORT_NAME] is on track for an outstanding final result.",
+      "This exceptional standard sets a strong platform for continued success in final exams.",
+      "I look forward to seeing [SHORT_NAME] carry this momentum into the final examinations.",
+      "An outstanding effort — [SHORT_NAME] should feel very proud of this achievement."
+    ],
+    s4:[
+      "Well done, [SHORT_NAME] — this has been a truly superb term.",
+      "I am very proud of [SHORT_NAME]'s commitment and achievements this term.",
+      "[SHORT_NAME] should feel very proud of what has been achieved this term.",
+      "This outstanding effort reflects exactly the right attitude towards learning."
+    ]
+  },
+  B: {
+    s1:[
+      "[FULL_NAME] has shown solid progress in IGCSE Economics and a good grasp of core concepts.",
+      "[FULL_NAME] has worked consistently well this term, achieving a sound standard throughout.",
+      "[FULL_NAME] demonstrates a reliable understanding of key economic principles and models.",
+      "[FULL_NAME] has made good progress and engages positively with economic topics this term.",
+      "[FULL_NAME] shows a competent understanding of demand, supply, and market mechanisms."
+    ],
+    s2_academic:[
+      "[SHORT_NAME] should focus on linking cause-and-effect chains more clearly in exam answers.",
+      "[SHORT_NAME] needs to improve accuracy when drawing and interpreting economic diagrams.",
+      "[SHORT_NAME] would benefit from using economic terminology with greater consistency in answers.",
+      "[SHORT_NAME] must manage exam time more carefully, especially during extended response questions.",
+      "[SHORT_NAME] is encouraged to take a more analytical approach rather than a descriptive one."
+    ],
+    s2_effort:[
+      "[SHORT_NAME] must commit to more consistent independent study and revision to consolidate learning.",
+      "[SHORT_NAME] should invest greater effort into completing homework and revision tasks thoroughly.",
+      "[SHORT_NAME] needs to demonstrate more consistent dedication to this subject inside and outside class.",
+      "[SHORT_NAME] would benefit greatly from dedicating more time to independent revision between lessons.",
+      "[SHORT_NAME] is encouraged to take greater ownership of [THEIR] learning and prioritise regular revision."
+    ],
+    s2_behaviour:[
+      "[SHORT_NAME] must demonstrate more consistent focus and self-discipline during lessons to reach [THEIR] potential.",
+      "[SHORT_NAME] should improve classroom conduct and ensure they are fully engaged for the entire lesson.",
+      "[SHORT_NAME] needs to take a more disciplined approach in class to create a more productive learning environment.",
+      "[SHORT_NAME] is expected to show greater respect for the learning environment and improve focus in lessons.",
+      "[SHORT_NAME] would benefit from channelling [THEIR] energy more productively and remaining on task during class."
+    ],
+    s3:[
+      "With focused revision, [SHORT_NAME] is well-placed to push into the top grade boundary.",
+      "Consistent practice and targeted revision will help [SHORT_NAME] achieve an A grade.",
+      "A positive term — continued effort will lead to strong improvement in final exams.",
+      "The A grade is within reach — keep pushing and address identified gaps systematically.",
+      "Maintaining this effort and building on strengths will ensure continued improvement."
+    ],
+    s4:[
+      "A positive term overall — keep it up, [SHORT_NAME].",
+      "Keep pushing, [SHORT_NAME] — the top grade is well within your reach.",
+      "I look forward to seeing [SHORT_NAME] build further on this solid foundation.",
+      "With continued focus, [SHORT_NAME] has every chance of a strong final result."
+    ]
+  },
+  C: {
+    s1:[
+      "[FULL_NAME] has worked to establish a foundational understanding of IGCSE Economics this term.",
+      "[FULL_NAME] shows some engagement with core economic topics and a cooperative class attitude.",
+      "[FULL_NAME] has contributed positively to class and is beginning to develop economic awareness.",
+      "[FULL_NAME] demonstrates a growing grasp of fundamental economic concepts across key topics.",
+      "[FULL_NAME] has shown willingness to engage and is developing [THEIR] understanding of the subject."
+    ],
+    s2_academic:[
+      "[SHORT_NAME] must prioritise regular revision to consolidate understanding across all topics.",
+      "[SHORT_NAME] needs to improve the quality of analytical responses under exam conditions.",
+      "[SHORT_NAME] should focus on building stronger written responses beyond surface description.",
+      "[SHORT_NAME] must dedicate more time to practising exam questions under timed conditions.",
+      "[SHORT_NAME] needs to develop a more disciplined and consistent approach to independent study."
+    ],
+    s2_effort:[
+      "[SHORT_NAME] must significantly increase effort levels, both in class and in independent study, to make progress.",
+      "[SHORT_NAME] needs to show much greater dedication to revision and homework to improve their understanding.",
+      "[SHORT_NAME] is expected to put in more effort outside of lessons if they wish to see meaningful improvement.",
+      "[SHORT_NAME] should take greater responsibility for [THEIR] learning and commit to a regular revision schedule.",
+      "[SHORT_NAME] must prioritise this subject more seriously and invest time in consistent, focused revision."
+    ],
+    s2_behaviour:[
+      "[SHORT_NAME] must significantly improve classroom behaviour and take a more focused approach to learning.",
+      "[SHORT_NAME] is expected to show greater self-discipline and ensure conduct supports [THEIR] own learning.",
+      "[SHORT_NAME] needs to take responsibility for behaviour in class and demonstrate a more mature approach.",
+      "[SHORT_NAME] must address classroom conduct as a priority, as it is directly affecting [THEIR] progress.",
+      "[SHORT_NAME] is strongly encouraged to refocus their attitude towards learning and show greater commitment."
+    ],
+    s3:[
+      "With greater focus and revision, [SHORT_NAME] has the ability to improve significantly.",
+      "I encourage [SHORT_NAME] to seek additional support and engage more with revision materials.",
+      "A more structured revision plan will help [SHORT_NAME] reach their true potential.",
+      "There is clear room for improvement — consistent effort will lead to better results.",
+      "I look forward to seeing [SHORT_NAME] apply themselves more fully in the coming term."
+    ],
+    s4:[
+      "Revision and practice will be the key to improvement.",
+      "I look forward to seeing [SHORT_NAME] make meaningful progress next term.",
+      "I encourage [SHORT_NAME] to seek support and use all available resources.",
+      "I remain confident that [SHORT_NAME] can make real progress with the right focus."
+    ]
+  }
+};
+
+// ── LEVEL SCORES ─────────────────────────────────────────────────────────────
+const LEVELS = {'Very Good':3,'Good':2,'Satisfactory':1,'Needs Improvement':0};
+function lvl(v){ return LEVELS[(v||'').trim()] ?? 2; }
+
+// ── VIETNAMESE DETECTION ──────────────────────────────────────────────────────
+const VIET_SURNAMES = new Set([
+  'nguyen','le','tran','pham','hoang','huynh','phan','vu','vo','dang',
+  'bui','do','ho','ngo','duong','ly','dao','dinh','mai','trieu','luong',
+  'trinh','nghiem','luu','truong','lam','to','thai','ta','ky','khuc'
+]);
+function isViet(n){ return VIET_SURNAMES.has(n.trim().split(/\s+/)[0].toLowerCase()); }
+
+// ── JAPANESE DETECTION ────────────────────────────────────────────────────────
+// Japanese names are written Family → Given, so short name = last word (given name)
+const JAPANESE_SURNAMES = new Set([
+  'araki','sato','suzuki','takahashi','tanaka','watanabe','ito','yamamoto',
+  'nakamura','kobayashi','kato','yoshida','yamada','sasaki','yamaguchi',
+  'matsumoto','inoue','kimura','hayashi','shimizu','yamazaki','mori','abe',
+  'ikeda','hashimoto','yamashita','ishikawa','nakajima','maeda','fujita',
+  'ogawa','okamoto','matsuda','nishimura','fujii','goto','okada','hasegawa',
+  'murakami','kondo','ishii','saito','aoki','fujiwara','nakano','ueda',
+  'ogata','ishida','goto','nishida','miyamoto','murata','hara','ono'
+]);
+function isJapanese(n){ return JAPANESE_SURNAMES.has(n.trim().split(/\s+/)[0].toLowerCase()); }
+
+const KOREAN_SURNAMES = new Set([
+  'kim','lee','park','choi','jung','kang','cho','yoon','jang','lim',
+  'han','oh','seo','shin','kwon','hwang','ahn','song','hong','jeon',
+  'yu','ryu','noh','heo','sim','baek','moon','yang','nam','lim',
+  'ha','joo','ku','yoo','min','chun','bae','cha','roh','pi'
+]);
+function isKorean(n){ return KOREAN_SURNAMES.has(n.trim().split(/\s+/)[0].toLowerCase()); }
+
+// ── NAME HELPERS ──────────────────────────────────────────────────────────────
+function parseBracketed(raw){
+  const m=raw.trim().match(/^(.+?)\s*\((.+?)\)\s*$/);
+  return m?{fullName:m[1].trim(),nickname:m[2].trim()}:{fullName:raw.trim(),nickname:''};
+}
+function displayName(s){ return s.nickname?`${s.fullName} (${s.nickname})`:s.fullName; }
+function shortName(s){
+  if(s.nickname) return s.nickname;
+  const parts=s.fullName.trim().split(/\s+/);
+  if(s.viet||s.korean){
+    const noFam=parts.slice(1);
+    return noFam.length>=2?noFam.slice(-2).join(' '):noFam.join(' ')||parts[0];
+  }
+  if(s.jap){
+    // Japanese: Family → Given, so given name = last word
+    return parts[parts.length-1];
+  }
+  return parts[0];
+}
+function tier(grade){
+  const g=(grade||'').toString().trim().toUpperCase();
+  return(g==='A+'||g==='A*'||g==='A')?'A':g==='B'?'B':'C';
+}
+function renderTmpl(t,dn,sn,gender){
+  const g=gender||'';
+  return t
+    .replace(/\[FULL_NAME\]/g,dn)
+    .replace(/\[SHORT_NAME\]/g,sn)
+    .replace(/\[THEIR\]/g, g==='M'?'his':g==='F'?'her':'their')
+    .replace(/\[THEM\]/g,  g==='M'?'him':g==='F'?'her':'them')
+    .replace(/\[THEY\]/g,  g==='M'?'he' :g==='F'?'she':'they');
+}
+
+// ── AUTO LOGIC ────────────────────────────────────────────────────────────────
+function autoS2Cat(s){
+  const b=lvl(s.behaviour), e=lvl(s.effort);
+  if(b<=1) return 's2_behaviour';
+  if(e<=1) return 's2_effort';
+  return 's2_academic';
+}
+
+function assembleFull(s, sel){
+  const t=tier(s.grade), dn=displayName(s), sn=shortName(s);
+  const isAuto = sel.mode==='auto';
+
+  const s1i = sel.s1||0;
+  const s2cat = isAuto ? autoS2Cat(s) : (sel.s2cat||'s2_academic');
+  const s2i = sel.s2||0;
+  const s3i = sel.s3||0;
+
+  const g=s.gender||'';
+  const p1=renderTmpl(BANK[t].s1[s1i],dn,sn,g);
+  const p2=renderTmpl(BANK[t][s2cat][s2i],dn,sn,g);
+  const p3=renderTmpl(BANK[t].s3[s3i],dn,sn,g);
+  let comment=`${p1} ${p2} ${p3}`;
+
+  // Auto-add S4 padding if under 300 chars
+  if(comment.length < 300){
+    let s4idx = isAuto ? -1 : (sel.s4 ?? -1);
+    if(s4idx===-1){
+      const bank4 = BANK[t].s4.map((tmpl,i)=>({i, txt:renderTmpl(tmpl,dn,sn,g)}));
+      const fits = bank4.filter(x=>comment.length+1+x.txt.length<=350).sort((a,b)=>b.txt.length-a.txt.length);
+      if(fits.length) comment=`${comment} ${fits[0].txt}`;
+    } else if(s4idx>=0 && BANK[t].s4[s4idx]){
+      comment=`${comment} ${renderTmpl(BANK[t].s4[s4idx],dn,sn,g)}`;
+    }
+  } else if(sel.s4>=0 && !isAuto && BANK[t].s4[sel.s4]){
+    const s4txt=renderTmpl(BANK[t].s4[sel.s4],dn,sn,g);
+    if(comment.length+1+s4txt.length<=355) comment=`${comment} ${s4txt}`;
+  }
+  return comment;
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let students=[], selections={}, nextId=1;
+
+function loadState(){
+  try{
+    const ss=localStorage.getItem('igcse_s2');
+    const se=localStorage.getItem('igcse_sel2');
+    if(ss) students=JSON.parse(ss);
+    if(se) selections=JSON.parse(se);
+    if(students.length) nextId=Math.max(...students.map(x=>x.id))+1;
+  }catch(e){}
+}
+function saveState(){
+  localStorage.setItem('igcse_s2',JSON.stringify(students));
+  localStorage.setItem('igcse_sel2',JSON.stringify(selections));
+}
+
+// ── ADD / DELETE ──────────────────────────────────────────────────────────────
+function addManual(){
+  const raw=document.getElementById('i-name').value.trim();
+  if(!raw){alert('Please enter a name.');return;}
+  const parsed=parseBracketed(raw);
+  const nick=document.getElementById('i-nick').value.trim()||parsed.nickname;
+  const gender=document.querySelector('input[name="i-gender"]:checked');
+  pushStudent(
+    parsed.fullName, nick,
+    document.getElementById('i-grade').value,
+    document.getElementById('i-pct').value,
+    document.getElementById('i-prog').value,
+    document.getElementById('i-effort').value,
+    document.getElementById('i-beh').value,
+    gender ? gender.value : ''
+  );
+  ['i-name','i-nick','i-pct'].forEach(id=>document.getElementById(id).value='');
+  ['i-prog','i-effort','i-beh'].forEach(id=>document.getElementById(id).value='');
+  const checked=document.querySelector('input[name="i-gender"]:checked');
+  if(checked) checked.checked=false;
+  document.getElementById('i-name').focus();
+}
+
+function pushStudent(fullName,nickname,grade,percent,progress,effort,behaviour,gender){
+  const id=nextId++;
+  students.push({id,fullName,nickname:nickname||'',grade:grade||'C',
+    percent:parseFloat(percent)||0,
+    progress:progress||'',effort:effort||'',behaviour:behaviour||'',
+    gender:gender||'',
+    viet:isViet(fullName), jap:!isViet(fullName)&&isJapanese(fullName), korean:!isViet(fullName)&&!isJapanese(fullName)&&isKorean(fullName)});
+  if(!selections[id]) selections[id]={mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1};
+  saveState(); renderAll();
+}
+
+function setGender(id,g){
+  const s=students.find(x=>x.id===id);
+  if(s){ s.gender=g; saveState(); renderAll(); }
+}
+
+function delStudent(id){
+  students=students.filter(s=>s.id!==id);
+  delete selections[id];
+  saveState(); renderAll();
+}
+function clearAll(){
+  if(!students.length||confirm('Clear all students? This cannot be undone.')){
+    students=[];selections={};saveState();renderAll();
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll(){
+  document.getElementById('s-count').textContent=students.length;
+  renderRoster(); renderComments(); renderExport();
+}
+
+function pebClass(v){
+  if(!v) return '';
+  if(v==='Very Good') return 'peb-vg';
+  if(v==='Good') return 'peb-g';
+  if(v==='Satisfactory') return 'peb-s';
+  return 'peb-ni';
+}
+
+function renderRoster(){
+  const w=document.getElementById('roster-wrap');
+  if(!students.length){w.innerHTML=`<div class="empty"><div class="ei">👨‍🎓</div><p>No students yet.</p></div>`;return;}
+  const missingGender=students.filter(s=>!s.gender).length;
+  let h='';
+  if(missingGender){
+    h+=`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:.6rem .9rem;margin-bottom:.75rem;font-size:.82rem;color:#92400e;">
+      ⚠️ <strong>${missingGender} student${missingGender>1?'s are':' is'} missing gender</strong> — set M/F below before exporting.
+    </div>`;
+  }
+  h+=`<div style="overflow-x:auto"><table><thead><tr>
+    <th>#</th><th>Full Name</th><th>Short Name</th>
+    <th>Gender <span style="color:var(--danger)">*</span></th>
+    <th>Grade</th><th>%</th>
+    <th>Progress</th><th>Effort</th><th>Behaviour</th><th>Name type</th><th></th>
+  </tr></thead><tbody>`;
+  students.forEach((s,i)=>{
+    const t=tier(s.grade),sn=shortName(s);
+    const genderBtns=`
+      <button class="gender-btn${s.gender==='M'?' active-m':''}" onclick="setGender(${s.id},'M')" title="Male">M</button>
+      <button class="gender-btn${s.gender==='F'?' active-f':''}" onclick="setGender(${s.id},'F')" title="Female">F</button>
+      ${!s.gender?'<span style="color:var(--danger);font-size:.7rem;margin-left:.2rem">⚠</span>':''}`;
+    h+=`<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><strong>${s.fullName}</strong>${s.nickname?` <span style="color:var(--muted);font-size:.75rem">(${s.nickname})</span>`:''}</td>
+      <td><span class="tag-short">${sn}</span></td>
+      <td><div style="display:flex;align-items:center;gap:.2rem">${genderBtns}</div></td>
+      <td><span class="badge b${t}">${s.grade}</span></td>
+      <td>${s.percent||'—'}</td>
+      <td><span class="${pebClass(s.progress)}">${s.progress||'—'}</span></td>
+      <td><span class="${pebClass(s.effort)}">${s.effort||'—'}</span></td>
+      <td><span class="${pebClass(s.behaviour)}">${s.behaviour||'—'}</span></td>
+      <td>${s.viet?'<span class="tag-viet">Vietnamese</span>':s.jap?'<span class="tag-viet" style="background:#fdf4ff;color:#7c3aed;border-color:#d8b4fe">Japanese</span>':s.korean?'<span class="tag-viet" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">Korean</span>':'<span style="color:var(--muted);font-size:.72rem">Non-Vietnamese</span>'}</td>
+      <td><button class="btn btn-red btn-sm" onclick="delStudent(${s.id})">✕</button></td>
+    </tr>`;
+  });
+  h+='</tbody></table></div>';
+  w.innerHTML=h;
+}
+
+function renderComments(){
+  const w=document.getElementById('comments-wrap');
+  if(!students.length){w.innerHTML=`<div class="empty"><div class="ei">✏️</div><p>Add students in Tab 1 first.</p></div>`;return;}
+  let h='';
+  students.forEach(s=>{
+    const t=tier(s.grade),dn=displayName(s),sn=shortName(s),g=s.gender||'';
+    const sel=selections[s.id]||{mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1};
+    const isAuto=sel.mode==='auto';
+    const s2cat=isAuto?autoS2Cat(s):(sel.s2cat||'s2_academic');
+    const s2CatLabel={'s2_academic':'Academic','s2_effort':'Effort & Work Ethic','s2_behaviour':'Behaviour'}[s2cat];
+    const comment=assembleFull(s,sel);
+    const len=comment.length;
+    const ccClass=len>350?'over':len>=330?'good':len>=300?'near':'low';
+    const ccMsg=len>350?`⚠ ${len}/350 — too long`:`${len} / 350 chars`;
+
+    const s2Opts=[
+      `<optgroup label="Academic Skills">`,
+      ...BANK[t].s2_academic.map((tmpl,i)=>`<option value="s2_academic:${i}"${s2cat==='s2_academic'&&sel.s2===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`),
+      `</optgroup><optgroup label="Effort & Work Ethic">`,
+      ...BANK[t].s2_effort.map((tmpl,i)=>`<option value="s2_effort:${i}"${s2cat==='s2_effort'&&sel.s2===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`),
+      `</optgroup><optgroup label="Behaviour">`,
+      ...BANK[t].s2_behaviour.map((tmpl,i)=>`<option value="s2_behaviour:${i}"${s2cat==='s2_behaviour'&&sel.s2===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`),
+      `</optgroup>`
+    ].join('');
+
+    const s4Opts=[
+      `<option value="-1"${sel.s4===-1?' selected':''}>Auto (add if needed)</option>`,
+      `<option value="-2"${sel.s4===-2?' selected':''}>None</option>`,
+      ...BANK[t].s4.map((tmpl,i)=>`<option value="${i}"${sel.s4===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`)
+    ].join('');
+
+    h+=`<div class="sc-card">
+      <div class="sc-hdr">
+        <span class="sc-name">${dn}</span>
+        <span class="badge b${t}">${s.grade}</span>
+        ${s.percent?`<span style="font-size:.75rem;color:var(--muted)">${s.percent}%</span>`:''}
+        <span class="tag-short">${sn}</span>
+        <div class="mode-toggle">
+          <button class="mode-btn${isAuto?' active':''}" onclick="setMode(${s.id},'auto')">⚡ Auto</button>
+          <button class="mode-btn${!isAuto?' active':''}" onclick="setMode(${s.id},'manual')">✏️ Manual</button>
+        </div>
+      </div>
+      ${(s.progress||s.effort||s.behaviour)?`<div class="peb-row">
+        ${s.progress?`<span class="peb-item"><span class="peb-label">Progress:</span><span class="${pebClass(s.progress)}">${s.progress}</span></span>`:''}
+        ${s.effort?`<span class="peb-item"><span class="peb-label">Effort:</span><span class="${pebClass(s.effort)}">${s.effort}</span></span>`:''}
+        ${s.behaviour?`<span class="peb-item"><span class="peb-label">Behaviour:</span><span class="${pebClass(s.behaviour)}">${s.behaviour}</span></span>`:''}
+        ${isAuto?`<span class="peb-item" style="margin-left:auto"><span class="peb-label">S2 type auto-selected:</span> <span class="auto-tag">${s2CatLabel}</span></span>`:''}
+      </div>`:''}
+      <div class="s-row${isAuto?' auto-row':''}">
+        <span class="s-lbl">S1 · Opening${isAuto?'<small>editable</small>':''}</span>
+        <select class="s-sel" onchange="updateS(${s.id},'s1',this.value)">
+          ${BANK[t].s1.map((tmpl,i)=>`<option value="${i}"${sel.s1===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="s-row${isAuto?' auto-row':''}">
+        <span class="s-lbl">S2 · Improvement${isAuto?`<small>auto: ${s2CatLabel}</small>`:'<small>choose category</small>'}</span>
+        <select class="s-sel" onchange="updateS2(${s.id},this.value)">${s2Opts}</select>
+      </div>
+      <div class="s-row${isAuto?' auto-row':''}">
+        <span class="s-lbl">S3 · Close${isAuto?'<small>editable</small>':''}</span>
+        <select class="s-sel" onchange="updateS(${s.id},'s3',this.value)">
+          ${BANK[t].s3.map((tmpl,i)=>`<option value="${i}"${sel.s3===i?' selected':''}>${renderTmpl(tmpl,dn,sn,g)}</option>`).join('')}
+        </select>
+      </div>
+      ${len<330||!isAuto?`<div class="s-row">
+        <span class="s-lbl">S4 · Extra<small>padding sentence</small></span>
+        <select class="s-sel" onchange="updateS(${s.id},'s4',this.value)">${s4Opts}</select>
+      </div>`:''}
+      <div class="preview" id="prev-${s.id}">${comment}</div>
+      <div class="sc-foot">
+        <span class="cc ${ccClass}" id="cc-${s.id}">${ccMsg}</span>
+        <button class="btn btn-ghost btn-sm" onclick="copyOne(${s.id})">📋 Copy</button>
+      </div>
+    </div>`;
+  });
+  w.innerHTML=h;
+}
+
+function renderExport(){
+  const w=document.getElementById('export-wrap');
+  if(!students.length){w.innerHTML=`<div class="empty"><div class="ei">📄</div><p>Add students first.</p></div>`;return;}
+  let h='';
+  students.forEach(s=>{
+    const t=tier(s.grade),dn=displayName(s);
+    const comment=assembleFull(s,selections[s.id]||{mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1});
+    const len=comment.length;
+    h+=`<div class="exp-card">
+      <div class="exp-hdr">
+        <span class="exp-name">${dn} <span class="badge b${t}">${s.grade}</span></span>
+        <button class="btn btn-ghost btn-sm" onclick="copyOne(${s.id})">📋 Copy</button>
+      </div>
+      <div class="exp-txt">${comment}</div>
+      <div style="text-align:right;margin-top:.25rem">
+        <span class="cc ${len>350?'over':len>=330?'good':'near'}" style="font-size:.7rem">${len} / 350</span>
+      </div>
+    </div>`;
+  });
+  w.innerHTML=h;
+}
+
+// ── SELECTIONS ────────────────────────────────────────────────────────────────
+function ensureSel(id){ if(!selections[id]) selections[id]={mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1}; }
+
+function setMode(id,mode){
+  ensureSel(id);
+  selections[id].mode=mode;
+  saveState(); renderComments(); renderExport();
+}
+function setAllMode(mode){
+  students.forEach(s=>{ensureSel(s.id); selections[s.id].mode=mode;});
+  saveState(); renderComments(); renderExport();
+}
+
+function updateS(id,field,val){
+  ensureSel(id);
+  selections[id][field]=+val;
+  saveState(); liveUpdate(id);
+}
+function updateS2(id,val){
+  ensureSel(id);
+  const [cat,idx]=val.split(':');
+  selections[id].s2cat=cat;
+  selections[id].s2=+idx;
+  saveState(); liveUpdate(id);
+}
+
+function liveUpdate(id){
+  const s=students.find(x=>x.id===id);
+  const comment=assembleFull(s,selections[id]);
+  const len=comment.length;
+  const ccClass=len>350?'over':len>=330?'good':len>=300?'near':'low';
+  const prev=document.getElementById(`prev-${id}`);
+  const cnt=document.getElementById(`cc-${id}`);
+  if(prev) prev.textContent=comment;
+  if(cnt){cnt.textContent=len>350?`⚠ ${len}/350 — too long`:`${len} / 350 chars`;cnt.className=`cc ${ccClass}`;}
+  renderExport();
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(name,btn){
+  document.querySelectorAll('.pane').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`pane-${name}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── SPREADSHEET IMPORT ────────────────────────────────────────────────────────
+function handleSheet(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      let added=0;
+      rows.forEach(row=>{
+        const get=(...names)=>{
+          for(const n of names){
+            const k=Object.keys(row).find(k=>k.toLowerCase().replace(/[\s_]/g,'').includes(n));
+            if(k&&row[k]) return String(row[k]).trim();
+          }
+          return '';
+        };
+        const rawName=get('name','student'); if(!rawName) return;
+        const parsed=parseBracketed(rawName);
+        const nick=get('nickname','englishname','nick')||parsed.nickname;
+        const grade=get('grade','symbol','mark');
+        const pct=get('%','percent','percentage','score');
+        const prog=get('progress');
+        const eff=get('effort');
+        const beh=get('behaviour','behavior');
+        const rawGender=get('gender','sex','m/f');
+        const gender=rawGender?(/^f/i.test(rawGender)?'F':'M'):'';
+        if(parsed.fullName){pushStudent(parsed.fullName,nick,grade||'C',pct,prog,eff,beh,gender);added++;}
+      });
+      alert(`Imported ${added} student${added!==1?'s':''} from spreadsheet.`);
+    }catch(err){alert('Could not read file. Ensure it has a "Name" or "Student Name" column.');}
+  };
+  reader.readAsBinaryString(file); e.target.value='';
+}
+
+// ── IMAGE OCR ─────────────────────────────────────────────────────────────────
+const REPORT_NOISE=/\b(satisfactory|good|very|excellent|outstanding|poor|needs|improvement|student|code|name|progress|effort|behaviour|behavior|percent|grade|symbol|comment|subject|teacher|stu\w*)\b/gi;
+
+function cleanOCRName(raw){
+  return raw
+    .replace(/STU\w+/gi,'')
+    .replace(new RegExp(REPORT_NOISE.source,'gi'),'')
+    .replace(/\d+(\.\d+)?%?/g,'')
+    .replace(/[^a-zA-ZÀ-ÿ\s()\-']/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+
+// Extract up to 3 Progress/Effort/Behaviour values from an OCR line segment.
+// Each pass picks whichever value starts EARLIEST in the remaining text,
+// so "Satisfactory Good Very Good" correctly yields all three in order.
+function extractPEB(text){
+  const vals=['Very Good','Needs Improvement','Satisfactory','Good'];
+  const found=[];
+  let t=text;
+  for(let i=0;i<3;i++){
+    let bestIdx=Infinity, bestVal=null;
+    for(const v of vals){
+      const idx=t.toLowerCase().indexOf(v.toLowerCase());
+      if(idx!==-1 && idx<bestIdx){bestIdx=idx; bestVal=v;}
+    }
+    if(!bestVal) break;
+    found.push(bestVal);
+    t=t.substring(bestIdx+bestVal.length);
+  }
+  return {progress:found[0]||'',effort:found[1]||'',behaviour:found[2]||''};
+}
+
+async function handleImg(e){
+  const file=e.target.files[0]; if(!file) return;
+  const status=document.getElementById('ocr-status');
+  status.style.display='block';
+  status.textContent='⏳ Loading OCR engine...';
+  try{
+    if(typeof Tesseract==='undefined'){
+      await new Promise((res,rej)=>{
+        const sc=document.createElement('script');
+        sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);
+      });
+    }
+    const{data:{text}}=await Tesseract.recognize(file,'eng',{
+      logger:m=>{if(m.status==='recognizing text') status.textContent=`⏳ OCR: ${Math.round(m.progress*100)}%`;}
+    });
+    status.textContent='✅ Done. Parsing rows...';
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    let added=0,skipped=0;
+    lines.forEach(line=>{
+      const gm=line.match(/\b(A\+|A\*|A|B|C)\b/);
+      const pm=line.match(/\b(\d{2,3}(?:\.\d+)?)\b/);
+      if(!gm) return;
+      const gradeIdx=line.search(/\b(A\+|A\*|A|B|C)\b/);
+      const pctIdx=pm?line.indexOf(pm[0]):gradeIdx;
+      const stuIdx=line.search(/\bSTU\w+/i);
+      const anchors=[gradeIdx,pctIdx,stuIdx].filter(i=>i>0);
+      const cutAt=anchors.length?Math.min(...anchors):-1;
+      let namePart=cutAt>0?line.substring(0,cutAt):line.replace(/\b(A\+|A\*|A|B|C)\b.*/,'');
+      namePart=cleanOCRName(namePart);
+      if(namePart.length<4||!namePart.includes(' ')){skipped++;return;}
+      const p=parseBracketed(namePart);
+      if(p.fullName.split(/\s+/).length<2){skipped++;return;}
+      // Extract P/E/B from the remainder of the line after the name
+      const remainder=cutAt>0?line.substring(cutAt):line;
+      const peb=extractPEB(remainder);
+      pushStudent(p.fullName,p.nickname,gm[0].toUpperCase(),pm?pm[1]:'',peb.progress,peb.effort,peb.behaviour,'');
+      added++;
+    });
+    const note=skipped?` (${skipped} rows skipped)`:'';
+    status.textContent=added
+      ?`✅ Imported ${added} student${added!==1?'s':''}${note}. ⚠️ Review roster — OCR may merge words or miss P/E/B data.`
+      :'⚠️ Could not detect rows. Try a clearer image or add students manually.';
+  }catch(err){status.textContent='❌ OCR failed. Please add students manually.';}
+  e.target.value='';
+}
+
+// ── EXPORT VALIDATION ─────────────────────────────────────────────────────────
+function checkGenders(single){
+  const missing=students.filter(s=>!s.gender);
+  if(single){
+    const s=students.find(x=>x.id===single);
+    if(s&&!s.gender){alert(`Please set gender (M/F) for ${s.fullName} before copying.`);return false;}
+    return true;
+  }
+  if(missing.length){
+    alert(`Please set gender (M/F) for the following students before exporting:\n\n${missing.map(s=>'• '+s.fullName).join('\n')}`);
+    return false;
+  }
+  return true;
+}
+
+// ── COPY / EXPORT ─────────────────────────────────────────────────────────────
+function copyOne(id){
+  if(!checkGenders(id)) return;
+  const s=students.find(x=>x.id===id);
+  navigator.clipboard.writeText(assembleFull(s,selections[id]||{mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1})).then(()=>{
+    document.querySelectorAll(`button[onclick="copyOne(${id})"]`).forEach(btn=>{
+      const o=btn.textContent;btn.textContent='✅ Copied!';setTimeout(()=>btn.textContent=o,1500);
+    });
+  });
+}
+function copyAll(){
+  if(!checkGenders()) return;
+  const txt=students.map(s=>`${displayName(s)} (${s.grade})\n${assembleFull(s,selections[s.id]||{mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1})}`).join('\n\n');
+  navigator.clipboard.writeText(txt).then(()=>alert('All comments copied!'));
+}
+function downloadCSV(){
+  if(!checkGenders()) return;
+  const rows=[['Student Name','Nickname','Gender','Grade','%','Progress','Effort','Behaviour','Comment']];
+  students.forEach(s=>{
+    rows.push([s.fullName,s.nickname,s.gender==='M'?'Male':s.gender==='F'?'Female':'',s.grade,s.percent,s.progress,s.effort,s.behaviour,
+      assembleFull(s,selections[s.id]||{mode:'auto',s1:0,s2cat:'s2_academic',s2:0,s3:0,s4:-1})]);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})),
+    download:'igcse_report_comments.csv'
+  });
+  a.click();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadState(); renderAll();
+</script>
+</body>
+</html>
