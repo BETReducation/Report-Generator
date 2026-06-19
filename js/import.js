@@ -55,71 +55,32 @@ async function downloadTemplate(){
   // ── Write base workbook ────────────────────────────────────────────────────
   const arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
-  // ── Enhance with JSZip: styles + data validations ─────────────────────────
-  // Strategy: replace styles.xml wholesale (avoids fragile regex patching),
-  // then inject row/cell styles and dataValidations into sheet1.xml.
+  // ── Inject data validations via JSZip ─────────────────────────────────────
   try {
     const zip = await JSZip.loadAsync(arr);
 
-    // 1. Replace styles.xml with a complete, known-good version ───────────────
-    // Styles: 0=default, 1=header (bold white on blue), 2=example (light-blue tint)
-    zip.file('xl/styles.xml', [
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
-      '<fonts count="2">',
-      '<font><sz val="12"/><color theme="1"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>',
-      '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>',
-      '</fonts>',
-      '<fills count="4">',
-      '<fill><patternFill patternType="none"/></fill>',
-      '<fill><patternFill patternType="gray125"/></fill>',
-      '<fill><patternFill patternType="solid"><fgColor rgb="FF1D4ED8"/><bgColor indexed="64"/></patternFill></fill>',
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/><bgColor indexed="64"/></patternFill></fill>',
-      '</fills>',
-      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>',
-      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>',
-      '<cellXfs count="3">',
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>',
-      '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>',
-      '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>',
-      '</cellXfs>',
-      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>',
-      '</styleSheet>',
-    ].join('\n'));
-
-    // 2. Patch sheet1.xml ────────────────────────────────────────────────────
+    // Read sheet1.xml as binary string (JSZip uses Latin-1; for ASCII-only
+    // modifications this is identical to UTF-8 so no encoding issues arise)
     let s1 = await zip.file('xl/worksheets/sheet1.xml').async('string');
 
-    // Header row: taller, style 1 (blue bg + white bold)
-    s1 = s1.replace('<row r="1"', '<row r="1" ht="20" customHeight="1" s="1" customFormat="1"');
-    ['A','B','C','D','E','F','G','H'].forEach(col => {
-      s1 = s1.replace(new RegExp(`<c r="${col}1"`, 'g'), `<c r="${col}1" s="1"`);
-    });
-
-    // Example rows: style 2 (light-blue tint)
-    s1 = s1.replace('<row r="2"', '<row r="2" s="2" customFormat="1"');
-    s1 = s1.replace('<row r="3"', '<row r="3" s="2" customFormat="1"');
-    ['A','B','C','D','E','F','G','H'].forEach(col => {
-      s1 = s1.replace(new RegExp(`<c r="${col}2"`, 'g'), `<c r="${col}2" s="2"`);
-      s1 = s1.replace(new RegExp(`<c r="${col}3"`, 'g'), `<c r="${col}3" s="2"`);
-    });
-
-    // Data validation dropdowns
+    // Append dataValidations immediately before </worksheet>
     if (!s1.includes('<dataValidations')) {
       const pebList = '"Needs Improvement,Satisfactory,Good,Very Good"';
-      s1 = s1.replace('</worksheet>',
+      const dvBlock =
         '<dataValidations count="5">' +
         dv('C2:C3000', '"M,F"') +
         dv('D2:D3000', '"A*,A,B,C,D,E,F,G"') +
         dv('F2:F3000', pebList) +
         dv('G2:G3000', pebList) +
         dv('H2:H3000', pebList) +
-        '</dataValidations></worksheet>');
+        '</dataValidations>';
+      // Use lastIndexOf so we replace only the final </worksheet> tag
+      const idx = s1.lastIndexOf('</worksheet>');
+      if (idx !== -1) s1 = s1.slice(0, idx) + dvBlock + '</worksheet>';
     }
 
     zip.file('xl/worksheets/sheet1.xml', s1);
 
-    // 3. Download ──────────────────────────────────────────────────────────────
     const blob = await zip.generateAsync({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -135,7 +96,8 @@ async function downloadTemplate(){
     setTimeout(() => URL.revokeObjectURL(url), 10000);
 
   } catch (err) {
-    console.warn('Enhanced template failed, falling back:', err);
+    console.error('[Template]', err);
+    // Fallback: plain xlsx without dropdowns
     XLSX.writeFile(wb, 'BETR_Class_Template.xlsx');
   }
 }
