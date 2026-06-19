@@ -62,6 +62,14 @@ function renameTerm(year, oldTerm, newTerm){
   localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
 }
 
+function moveReport(id, newYear, newTerm){
+  const reports = getSavedReports().map(r => {
+    if(r.id === id) return Object.assign({}, r, { academicYear: newYear, term: newTerm });
+    return r;
+  });
+  localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
+}
+
 function deleteSavedReport(id){
   if(!confirm('Delete this saved report? This cannot be undone.')) return;
   const reports = getSavedReports().filter(r => r.id !== id);

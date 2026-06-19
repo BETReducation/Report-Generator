@@ -202,7 +202,7 @@ ${sst.map(s => `<si><t xml:space="preserve">${xs(s)}</t></si>`).join('\n')}
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'BETR_Class_Template.xlsx';
+  a.download = 'Report Generator - Input Template.xlsx';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -321,6 +321,7 @@ function pickSheet(name){
     btn.textContent = `✓ ${name} — ${added} student${added !== 1 ? 's' : ''} imported`;
   }
   const status = document.getElementById('sheet-picker-status');
+  setRosterLabel(name);
   if(status) status.textContent =
     `"${name}" imported (${added} student${added !== 1 ? 's' : ''}${skipped ? `, ${skipped} skipped` : ''}).`
     + ' Click another sheet or close.';
@@ -364,6 +365,7 @@ function _importWorkbook(wb, sheetName, sourceName){
   const msg = `Imported ${added} student${added !== 1 ? 's' : ''} from "${sourceName || sheetName}".`
     + (skipped > 0 ? ` (${skipped} rows skipped)` : '');
   alert(msg);
+  setRosterLabel(sourceName || sheetName);
   saveState(); renderAll();
 }
 

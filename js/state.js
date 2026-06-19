@@ -3,6 +3,13 @@
 let students  = [];
 let selections = {};
 let nextId    = 1;
+let currentSheetName = '';
+
+function setRosterLabel(name){
+  currentSheetName = name || '';
+  const el = document.getElementById('roster-label');
+  if(el) el.textContent = name ? `Current Roster — ${name}` : 'Current Roster';
+}
 
 function loadState(){
   try {

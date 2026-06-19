@@ -4,8 +4,10 @@
 let prNav      = { year: null, term: null, level: null, subject: null };
 let prExpanded = new Set();
 
+const PERIOD_PRESETS = ['Term 1', 'Term 2', 'Term 3', 'Term 4', 'Semester 1', 'Semester 2', 'Mid-Year', 'End of Year'];
+
 // Encode a string safely for use inside a single-quoted JS string in an HTML attribute.
-function prEsc(v){ return v === null ? 'null' : `'${v}'`; }
+function prEsc(v){ return v === null ? 'null' : `'${v.replace(/'/g, "\\'")}'`; }
 
 function renderPastReports(){
   const w       = document.getElementById('past-reports-wrap');
@@ -75,18 +77,20 @@ function buildTermGrid(reports){
     const t = r.term || 'Unlabelled';
     counts[t] = (counts[t] || 0) + 1;
   });
-  // Sort: Term 1 → Term 2 → Term 3 → Term 4 → anything else → Unlabelled last
-  const termOrder = ['Term 1', 'Term 2', 'Term 3', 'Term 4'];
+  // Sort: presets in order → anything else alphabetically → Unlabelled last
   const sorted = [
-    ...termOrder.filter(t => counts[t]),
-    ...Object.keys(counts).filter(t => !termOrder.includes(t) && t !== 'Unlabelled').sort(),
+    ...PERIOD_PRESETS.filter(t => counts[t]),
+    ...Object.keys(counts).filter(t => !PERIOD_PRESETS.includes(t) && t !== 'Unlabelled').sort(),
     ...(counts['Unlabelled'] ? ['Unlabelled'] : [])
   ];
-  const icons = { 'Term 1': '1️⃣', 'Term 2': '2️⃣', 'Term 3': '3️⃣', 'Term 4': '4️⃣' };
+  const icons = {
+    'Term 1': '1️⃣', 'Term 2': '2️⃣', 'Term 3': '3️⃣', 'Term 4': '4️⃣',
+    'Semester 1': '🔵', 'Semester 2': '🟣', 'Mid-Year': '📆', 'End of Year': '🏁'
+  };
   return `<div class="pr-grid">
     ${sorted.map(t => `
       <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(t)},null,null)">
-        <button class="pr-rename-btn" onclick="event.stopPropagation();prRenameTerm(${prEsc(prNav.year)},${prEsc(t)})" title="Rename term">✏️</button>
+        <button class="pr-rename-btn" onclick="event.stopPropagation();prRenameTerm(${prEsc(prNav.year)},${prEsc(t)})" title="Rename / move period">✏️</button>
         <div class="pr-card-icon">${icons[t] || '📋'}</div>
         <div class="pr-card-title">${t}</div>
         <div class="pr-card-sub">${counts[t]} report${counts[t] !== 1 ? 's' : ''}</div>
@@ -173,6 +177,7 @@ function buildReportList(reports){
         </div>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="prToggle('${r.id}')">${isOpen ? '▲ Hide' : '▼ View'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="prOpenMoveModal('${r.id}')">📂 Move</button>
           <button class="btn btn-primary btn-sm" onclick="loadSavedReportToWorkspace('${r.id}')">⬆ Load to Workspace</button>
           <button class="btn btn-red btn-sm" onclick="deleteSavedReport('${r.id}')">🗑 Delete</button>
         </div>
@@ -187,12 +192,82 @@ function prSetNav(year, term, level, subject){
   renderPastReports();
 }
 
+// ── Rename Term modal ─────────────────────────────────────────────────────────
+
+let _prRenameYear = null, _prRenameTerm = null;
+
 function prRenameTerm(year, term){
-  const newName = prompt(`Rename "${term}" to:`, term);
-  if(!newName || newName.trim() === '' || newName.trim() === term) return;
-  renameTerm(year, term, newName.trim());
-  // If we're currently navigated into this term, update the nav state
-  if(prNav.term === term) prNav.term = newName.trim();
+  _prRenameYear = year;
+  _prRenameTerm = term;
+  const modal  = document.getElementById('rename-term-modal');
+  const sel    = document.getElementById('rt-preset');
+  const custom = document.getElementById('rt-custom');
+  // populate preset options
+  sel.innerHTML = PERIOD_PRESETS.map(p => `<option value="${p}"${p === term ? ' selected' : ''}>${p}</option>`).join('') +
+    `<option value="__custom__"${!PERIOD_PRESETS.includes(term) ? ' selected' : ''}>Custom…</option>`;
+  custom.value = PERIOD_PRESETS.includes(term) ? '' : term;
+  custom.style.display = PERIOD_PRESETS.includes(term) ? 'none' : 'block';
+  sel.onchange = () => {
+    custom.style.display = sel.value === '__custom__' ? 'block' : 'none';
+    if(sel.value !== '__custom__') custom.value = '';
+  };
+  modal.style.display = 'flex';
+}
+
+function closeRenameTermModal(){
+  document.getElementById('rename-term-modal').style.display = 'none';
+  _prRenameYear = null; _prRenameTerm = null;
+}
+
+function confirmRenameTerm(){
+  const sel    = document.getElementById('rt-preset');
+  const custom = document.getElementById('rt-custom');
+  const newName = sel.value === '__custom__' ? custom.value.trim() : sel.value;
+  if(!newName){ alert('Please choose or enter a period name.'); return; }
+  if(newName === _prRenameTerm){ closeRenameTermModal(); return; }
+  renameTerm(_prRenameYear, _prRenameTerm, newName);
+  if(prNav.term === _prRenameTerm) prNav.term = newName;
+  closeRenameTermModal();
+  renderPastReports();
+}
+
+// ── Move Report modal ─────────────────────────────────────────────────────────
+
+let _prMoveId = null;
+
+function prOpenMoveModal(id){
+  _prMoveId = id;
+  const modal = document.getElementById('move-report-modal');
+  const ySel  = document.getElementById('mv-year');
+  const tSel  = document.getElementById('mv-term');
+  const custom = document.getElementById('mv-custom');
+  ySel.innerHTML = ACADEMIC_YEARS.map(y => `<option${y === prNav.year ? ' selected' : ''}>${y}</option>`).join('');
+  tSel.innerHTML = PERIOD_PRESETS.map(p => `<option${p === prNav.term ? ' selected' : ''}>${p}</option>`).join('') +
+    `<option value="__custom__">Custom…</option>`;
+  custom.value = '';
+  custom.style.display = 'none';
+  tSel.onchange = () => {
+    custom.style.display = tSel.value === '__custom__' ? 'block' : 'none';
+  };
+  modal.style.display = 'flex';
+}
+
+function closeMoveReportModal(){
+  document.getElementById('move-report-modal').style.display = 'none';
+  _prMoveId = null;
+}
+
+function confirmMoveReport(){
+  const ySel   = document.getElementById('mv-year');
+  const tSel   = document.getElementById('mv-term');
+  const custom = document.getElementById('mv-custom');
+  const newYear = ySel.value;
+  const newTerm = tSel.value === '__custom__' ? custom.value.trim() : tSel.value;
+  if(!newTerm){ alert('Please choose or enter a period name.'); return; }
+  moveReport(_prMoveId, newYear, newTerm);
+  closeMoveReportModal();
+  // Navigate back to term level since the report moved away
+  prNav = { year: prNav.year, term: prNav.term, level: null, subject: null };
   renderPastReports();
 }
 

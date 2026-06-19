@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IGCSE Report Generator</title>
+  <title>Report Generator</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <div class="hdr">
-  <h1>IGCSE Report Generator</h1>
-  <p>Individualised student comments · 330–350 character target · Smart name handling</p>
+  <h1>Report Generator</h1>
+  <p>Positive Sandwich model · Individualised student comments · max 350 characters · Smart name handling</p>
 </div>
 
 <div class="tabs">
@@ -148,7 +149,9 @@
     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
       <button id="btn-save-report" class="btn btn-ghost" onclick="openSaveModal()">💾 Save Report</button>
       <button class="btn btn-ghost" onclick="copyAll()">📋 Copy All</button>
-      <button class="btn btn-primary" onclick="downloadCSV()">⬇ Download CSV</button>
+      <button class="btn btn-ghost" onclick="downloadWord()">📄 Download Word</button>
+      <button class="btn btn-primary" onclick="downloadExcel()">⬇ Download Excel</button>
+      <button class="btn btn-ghost" onclick="openCloudModal()">☁ Save to Cloud</button>
     </div>
   </div>
   <div id="export-wrap">
@@ -185,18 +188,61 @@
   </div>
 </div>
 
+<!-- Rename Term Modal -->
+<div id="rename-term-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeRenameTermModal()">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Rename Period</div>
+    <div class="modal-fields">
+      <div class="fg">
+        <label>Choose a period</label>
+        <select id="rt-preset"></select>
+      </div>
+      <div class="fg">
+        <input id="rt-custom" type="text" placeholder="Enter custom period name" style="display:none"/>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeRenameTermModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRenameTerm()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- Move Report Modal -->
+<div id="move-report-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeMoveReportModal()">
+  <div class="modal-box">
+    <div class="modal-title">📂 Move Report</div>
+    <div class="modal-fields">
+      <div class="fg">
+        <label>Academic Year</label>
+        <select id="mv-year"></select>
+      </div>
+      <div class="fg">
+        <label>Period</label>
+        <select id="mv-term"></select>
+      </div>
+      <div class="fg">
+        <input id="mv-custom" type="text" placeholder="Enter custom period name" style="display:none"/>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeMoveReportModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmMoveReport()">Move Report</button>
+    </div>
+  </div>
+</div>
+
 <!-- Save Report Modal -->
 <div id="save-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSaveModal()">
   <div class="modal-box">
     <div class="modal-title">💾 Save Report</div>
     <div class="modal-fields">
       <div class="fg">
-        <label>Term</label>
+        <label>Period</label>
         <select id="m-term">
           <option value="Term 1">Term 1</option>
-          <option value="Term 2">Term 2</option>
-          <option value="Term 3">Term 3</option>
-          <option value="Term 4">Term 4</option>
+          <option value="Semester 1">Semester 1</option>
+          <option value="Semester 2">Semester 2</option>
         </select>
       </div>
       <div class="fg">
@@ -215,6 +261,34 @@
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeSaveModal()">Cancel</button>
       <button class="btn btn-primary" onclick="confirmSave()">Save Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cloud Save Modal -->
+<div id="cloud-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeCloudModal()">
+  <div class="modal-box">
+    <div class="modal-title">☁ Save to Cloud Storage</div>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1.25rem">Choose a format to download, then upload to your cloud storage. The buttons below open your cloud storage in a new tab.</p>
+    <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
+      <div style="border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem">
+        <div style="font-weight:600;font-size:.875rem;margin-bottom:.5rem">📄 Microsoft OneDrive</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="cloudDownloadAndOpen('word','onedrive')">Download Word + Open OneDrive</button>
+          <button class="btn btn-ghost btn-sm" onclick="cloudDownloadAndOpen('excel','onedrive')">Download Excel + Open OneDrive</button>
+        </div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem">
+        <div style="font-weight:600;font-size:.875rem;margin-bottom:.5rem">🟢 Google Drive</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="cloudDownloadAndOpen('word','gdrive')">Download Word + Open Drive</button>
+          <button class="btn btn-ghost btn-sm" onclick="cloudDownloadAndOpen('excel','gdrive')">Download Excel + Open Drive</button>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);background:#f8f4f0;border-radius:6px;padding:.6rem .8rem">💡 The file downloads automatically, then your cloud storage opens in a new tab — just drag and drop the downloaded file to upload it.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeCloudModal()">Close</button>
     </div>
   </div>
 </div>
