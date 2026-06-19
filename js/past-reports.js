@@ -1,11 +1,10 @@
-// Past Reports tab — drill-down navigation: Years → Level → Subject → Reports.
-// NOTE: All onclick values use single-quoted strings to avoid conflict with HTML
-// attribute double-quote delimiters. None of our values contain apostrophes.
+// Past Reports tab — drill-down navigation:
+// All Years → Academic Year → Term → Level → Subject → Reports
 
-let prNav      = { year: null, level: null, subject: null };
+let prNav      = { year: null, term: null, level: null, subject: null };
 let prExpanded = new Set();
 
-// Encode a value for safe use inside a single-quoted JS string in an HTML attribute
+// Encode a string safely for use inside a single-quoted JS string in an HTML attribute.
 function prEsc(v){ return v === null ? 'null' : `'${v}'`; }
 
 function renderPastReports(){
@@ -21,6 +20,8 @@ function renderPastReports(){
 
   if(!prNav.year){
     h += buildYearGrid(reports);
+  } else if(!prNav.term){
+    h += buildTermGrid(reports);
   } else if(!prNav.level){
     h += buildLevelGrid(reports);
   } else if(!prNav.subject){
@@ -35,11 +36,13 @@ function renderPastReports(){
 
 function buildBreadcrumb(){
   if(!prNav.year) return '';
+  const y = prNav.year, t = prNav.term, l = prNav.level;
   const crumbs = [
-    { label: 'All Years', fn: `prSetNav(null,null,null)` }
+    { label: 'All Years', fn: `prSetNav(null,null,null,null)` },
+    { label: y,           fn: t ? `prSetNav(${prEsc(y)},null,null,null)` : null }
   ];
-  if(prNav.year)    crumbs.push({ label: prNav.year,    fn: `prSetNav(${prEsc(prNav.year)},null,null)` });
-  if(prNav.level)   crumbs.push({ label: prNav.level,   fn: `prSetNav(${prEsc(prNav.year)},${prEsc(prNav.level)},null)` });
+  if(t) crumbs.push({ label: t, fn: l ? `prSetNav(${prEsc(y)},${prEsc(t)},null,null)` : null });
+  if(l) crumbs.push({ label: l, fn: prNav.subject ? `prSetNav(${prEsc(y)},${prEsc(t)},${prEsc(l)},null)` : null });
   if(prNav.subject) crumbs.push({ label: prNav.subject, fn: null });
 
   return `<div class="pr-breadcrumb">
@@ -57,7 +60,7 @@ function buildYearGrid(reports){
   const years = Object.keys(counts).sort().reverse();
   return `<div class="pr-grid">
     ${years.map(y => `
-      <div class="pr-card" onclick="prSetNav(${prEsc(y)},null,null)">
+      <div class="pr-card" onclick="prSetNav(${prEsc(y)},null,null,null)">
         <div class="pr-card-icon">📅</div>
         <div class="pr-card-title">${y}</div>
         <div class="pr-card-sub">${counts[y]} report${counts[y] !== 1 ? 's' : ''}</div>
@@ -65,14 +68,42 @@ function buildYearGrid(reports){
   </div>`;
 }
 
-function buildLevelGrid(reports){
+function buildTermGrid(reports){
   const filtered = reports.filter(r => r.academicYear === prNav.year);
   const counts   = {};
+  filtered.forEach(r => {
+    const t = r.term || 'Unlabelled';
+    counts[t] = (counts[t] || 0) + 1;
+  });
+  // Sort: Term 1 → Term 2 → Term 3 → Term 4 → anything else → Unlabelled last
+  const termOrder = ['Term 1', 'Term 2', 'Term 3', 'Term 4'];
+  const sorted = [
+    ...termOrder.filter(t => counts[t]),
+    ...Object.keys(counts).filter(t => !termOrder.includes(t) && t !== 'Unlabelled').sort(),
+    ...(counts['Unlabelled'] ? ['Unlabelled'] : [])
+  ];
+  const icons = { 'Term 1': '1️⃣', 'Term 2': '2️⃣', 'Term 3': '3️⃣', 'Term 4': '4️⃣' };
+  return `<div class="pr-grid">
+    ${sorted.map(t => `
+      <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(t)},null,null)">
+        <div class="pr-card-icon">${icons[t] || '📋'}</div>
+        <div class="pr-card-title">${t}</div>
+        <div class="pr-card-sub">${counts[t]} report${counts[t] !== 1 ? 's' : ''}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function buildLevelGrid(reports){
+  const filtered = reports.filter(r =>
+    r.academicYear === prNav.year &&
+    (r.term || 'Unlabelled') === prNav.term
+  );
+  const counts = {};
   filtered.forEach(r => { counts[r.yearLevel] = (counts[r.yearLevel] || 0) + 1; });
   const levels = YEAR_LEVELS.filter(l => counts[l]);
   return `<div class="pr-grid">
     ${levels.map(l => `
-      <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(l)},null)">
+      <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(prNav.term)},${prEsc(l)},null)">
         <div class="pr-card-icon">🎓</div>
         <div class="pr-card-title">${l}</div>
         <div class="pr-card-sub">${counts[l]} report${counts[l] !== 1 ? 's' : ''}</div>
@@ -81,13 +112,17 @@ function buildLevelGrid(reports){
 }
 
 function buildSubjectGrid(reports){
-  const filtered = reports.filter(r => r.academicYear === prNav.year && r.yearLevel === prNav.level);
-  const counts   = {};
+  const filtered = reports.filter(r =>
+    r.academicYear === prNav.year &&
+    (r.term || 'Unlabelled') === prNav.term &&
+    r.yearLevel === prNav.level
+  );
+  const counts = {};
   filtered.forEach(r => { counts[r.subject] = (counts[r.subject] || 0) + 1; });
   const subs = Object.keys(counts).sort();
   return `<div class="pr-grid">
     ${subs.map(s => `
-      <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(prNav.level)},${prEsc(s)})">
+      <div class="pr-card" onclick="prSetNav(${prEsc(prNav.year)},${prEsc(prNav.term)},${prEsc(prNav.level)},${prEsc(s)})">
         <div class="pr-card-icon">📚</div>
         <div class="pr-card-title">${s}</div>
         <div class="pr-card-sub">${counts[s]} report${counts[s] !== 1 ? 's' : ''}</div>
@@ -98,6 +133,7 @@ function buildSubjectGrid(reports){
 function buildReportList(reports){
   const filtered = reports.filter(r =>
     r.academicYear === prNav.year &&
+    (r.term || 'Unlabelled') === prNav.term &&
     r.yearLevel    === prNav.level &&
     r.subject      === prNav.subject
   );
@@ -131,7 +167,7 @@ function buildReportList(reports){
     return `<div class="pr-report-card">
       <div class="pr-report-hdr">
         <div>
-          <span class="pr-report-title">${r.term || 'Saved Report'}</span>
+          <span class="pr-report-title">${r.subject} · ${r.yearLevel}</span>
           <span class="pr-report-meta">${dateStr} at ${timeStr} · ${r.studentCount} student${r.studentCount !== 1 ? 's' : ''}</span>
         </div>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap">
@@ -145,8 +181,8 @@ function buildReportList(reports){
   }).join('');
 }
 
-function prSetNav(year, level, subject){
-  prNav = { year, level, subject };
+function prSetNav(year, term, level, subject){
+  prNav = { year, term, level, subject };
   renderPastReports();
 }
 

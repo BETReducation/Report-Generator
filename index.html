@@ -162,8 +162,13 @@
     <div class="modal-title">💾 Save Report</div>
     <div class="modal-fields">
       <div class="fg">
-        <label>Term / Label <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-        <input id="m-term" type="text" placeholder="e.g. Term 1, Mid-year, End of Year" onkeydown="if(event.key==='Enter')confirmSave()"/>
+        <label>Term</label>
+        <select id="m-term">
+          <option value="Term 1">Term 1</option>
+          <option value="Term 2">Term 2</option>
+          <option value="Term 3">Term 3</option>
+          <option value="Term 4">Term 4</option>
+        </select>
       </div>
       <div class="fg">
         <label>Academic Year</label>

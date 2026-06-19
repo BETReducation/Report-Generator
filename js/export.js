@@ -77,11 +77,11 @@ function openSaveModal(){
     `<option value="${s}">${s}</option>`
   ).join('');
 
-  // Clear term field
-  document.getElementById('m-term').value = '';
+  // Default term to Term 1
+  document.getElementById('m-term').value = 'Term 1';
 
   document.getElementById('save-modal').style.display = 'flex';
-  document.getElementById('m-term').focus();
+  document.getElementById('m-year').focus();
 }
 
 function closeSaveModal(){
@@ -95,8 +95,8 @@ function confirmSave(){
     subject:      document.getElementById('m-subject').value,
     term:         document.getElementById('m-term').value.trim()
   };
-  if(!meta.academicYear || !meta.yearLevel || !meta.subject){
-    alert('Please fill in Academic Year, Year Level, and Subject.');
+  if(!meta.academicYear || !meta.term || !meta.yearLevel || !meta.subject){
+    alert('Please fill in all fields.');
     return;
   }
   saveReport(meta);
