@@ -179,6 +179,7 @@ function buildReportList(reports){
           <button class="btn btn-ghost btn-sm" onclick="prToggle('${r.id}')">${isOpen ? '▲ Hide' : '▼ View'}</button>
           <button class="btn btn-ghost btn-sm" onclick="prOpenMoveModal('${r.id}')">📂 Move</button>
           <button class="btn btn-primary btn-sm" onclick="loadSavedReportToWorkspace('${r.id}')">⬆ Load to Workspace</button>
+          <button class="btn btn-ghost btn-sm" onclick="prDownloadReport('${r.id}')">⬇ Download</button>
           <button class="btn btn-red btn-sm" onclick="deleteSavedReport('${r.id}')">🗑 Delete</button>
         </div>
       </div>
@@ -275,4 +276,39 @@ function prToggle(id){
   if(prExpanded.has(id)) prExpanded.delete(id);
   else prExpanded.add(id);
   renderPastReports();
+}
+
+// ── Download saved report as Word doc ─────────────────────────────────────────
+
+function prDownloadReport(id){
+  const r = getSavedReports().find(r => r.id === id);
+  if(!r) return;
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let body = '';
+  r.students.forEach((s, i) => {
+    const sel     = r.selections[s.id] || { mode: 'auto', s1: 0, s2cat: 's2_academic', s2: 0, s3: 0, s4: -1 };
+    const dn      = displayName(s);
+    const comment = assembleFull(s, sel);
+    const meta    = [s.grade, s.percent ? s.percent + '%' : ''].filter(Boolean).join(' · ');
+    if(i > 0) body += '<p>&nbsp;</p>';
+    body += `<p><b>${esc(dn)}</b> <span style="color:#888">(${esc(meta)})</span></p>`;
+    body += `<p>${esc(comment)}</p>`;
+  });
+
+  const label    = [r.subject, r.yearLevel, r.term, r.academicYear].filter(Boolean).join(' - ');
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8">
+  <style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.5}</style>
+  </head><body>${body}</body></html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const a = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(blob),
+    download: `${label}.doc`
+  });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 }
