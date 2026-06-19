@@ -43,7 +43,7 @@
       <div class="fg">
         <label>Grade</label>
         <select id="i-grade">
-          <option>A+</option><option>A</option><option>B</option><option>C</option>
+          <option>A*</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option>
         </select>
       </div>
       <div class="fg" style="width:65px">
@@ -87,24 +87,22 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Import from Spreadsheet or Image</div>
+    <div class="card-title">Import from Template</div>
     <div class="upload-grid">
+      <div class="upload-box" style="cursor:default">
+        <div class="icon">⬇️</div>
+        <strong>Step 1 — Download the Template</strong>
+        <p>Fill it in with your class data. Dropdowns are included for Gender, Grade, Progress, Effort &amp; Behaviour.</p>
+        <button class="btn btn-primary" style="margin-top:.75rem" onclick="downloadTemplate()">Download Template (.xlsx)</button>
+      </div>
       <label class="upload-box">
         <input type="file" accept=".xlsx,.xls,.csv" onchange="handleSheet(event)"/>
-        <div class="icon">📊</div>
-        <strong>Upload Spreadsheet</strong>
-        <p>Excel (.xlsx / .xls) or CSV</p>
-        <p>Columns: Name, Grade; optional: Nickname, %, Progress, Effort, Behaviour</p>
-      </label>
-      <label class="upload-box">
-        <input type="file" accept="image/*" onchange="handleImg(event)"/>
-        <div class="icon">🖼️</div>
-        <strong>Upload Image / Screenshot</strong>
-        <p>Extracts names &amp; grades via OCR</p>
-        <p>Review roster carefully after — OCR may merge words</p>
+        <div class="icon">📤</div>
+        <strong>Step 2 — Upload Completed Template</strong>
+        <p>Excel (.xlsx / .xls) or CSV — including Google Sheets exports.</p>
+        <p style="margin-top:.4rem;font-size:.72rem">Click to choose file</p>
       </label>
     </div>
-    <div id="ocr-status"></div>
   </div>
 
   <div class="card">
