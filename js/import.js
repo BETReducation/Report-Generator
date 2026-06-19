@@ -275,12 +275,12 @@ function handleSheet(e){
 
 function openSheetPicker(sheetNames){
   const list = document.getElementById('sheet-picker-list');
-  list.innerHTML = sheetNames.map(name => `
-    <button class="btn btn-ghost sheet-pick-btn" data-sheet=${JSON.stringify(name)}
+  list.innerHTML = sheetNames.map(name => {
+    const q = `'${name.replace(/'/g, "\\'")}'`; // single-quote safe for onclick attribute
+    return `<button class="btn btn-ghost sheet-pick-btn" data-sheet="${name.replace(/"/g,'&quot;')}"
       style="justify-content:flex-start;text-align:left;padding:.5rem .85rem"
-      onclick="pickSheet(${JSON.stringify(name)})">
-      📄 ${name}
-    </button>`).join('');
+      onclick="pickSheet(${q})">📄 ${name}</button>`;
+  }).join('');
   const status = document.getElementById('sheet-picker-status');
   if(status) status.textContent = '';
   document.getElementById('sheet-picker-modal').style.display = 'flex';
