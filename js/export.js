@@ -64,35 +64,34 @@ function downloadExcel(){
 }
 
 // ── Download Word ─────────────────────────────────────────────────────────────
+// Uses Word-compatible HTML (no external library required)
 
-async function downloadWord(){
+function downloadWord(){
   if(!checkGenders()) return;
-  if(typeof docx === 'undefined'){
-    alert('Word export library is still loading — please try again in a moment.');
-    return;
-  }
-  const { Document, Paragraph, TextRun, Packer, HeadingLevel, AlignmentType } = docx;
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  const children = [];
+  let body = '';
   students.forEach((s, i) => {
-    const sel = selections[s.id] || { mode: 'auto', s1: 0, s2cat: 's2_academic', s2: 0, s3: 0, s4: -1 };
+    const sel     = selections[s.id] || { mode: 'auto', s1: 0, s2cat: 's2_academic', s2: 0, s3: 0, s4: -1 };
     const dn      = displayName(s);
     const comment = assembleFull(s, sel);
-    if(i > 0) children.push(new Paragraph({ text: '' }));
-    children.push(new Paragraph({
-      children: [
-        new TextRun({ text: dn, bold: true }),
-        new TextRun({ text: `  (${s.grade}${s.percent ? ' · ' + s.percent + '%' : ''})`, color: '888888' })
-      ]
-    }));
-    children.push(new Paragraph({ children: [new TextRun({ text: comment })] }));
+    const meta    = [s.grade, s.percent ? s.percent + '%' : ''].filter(Boolean).join(' · ');
+    if(i > 0) body += '<p>&nbsp;</p>';
+    body += `<p><b>${esc(dn)}</b> <span style="color:#888">(${esc(meta)})</span></p>`;
+    body += `<p>${esc(comment)}</p>`;
   });
 
-  const doc = new Document({ sections: [{ children }] });
-  const blob = await Packer.toBlob(doc);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8">
+  <style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.5}</style>
+  </head><body>${body}</body></html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
   const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: 'Report Comments.docx'
+    href:     URL.createObjectURL(blob),
+    download: 'Report Comments.doc'
   });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
