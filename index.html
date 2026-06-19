@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IGCSE Report Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="hdr">
+  <h1>IGCSE Report Generator</h1>
+  <p>Individualised student comments · 330–350 character target · Smart name handling</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('students',this)">1 · Students</button>
+  <button class="tab-btn" onclick="switchTab('comments',this)">2 · Build Comments</button>
+  <button class="tab-btn" onclick="switchTab('export',this)">3 · Export</button>
+</div>
+
+<!-- TAB 1 · Students -->
+<div id="pane-students" class="pane active">
+
+  <div class="card">
+    <div class="card-title">Add Student Manually</div>
+    <div class="form-row">
+      <div class="fg" style="flex:2;min-width:170px">
+        <label>Full Name</label>
+        <input id="i-name" type="text" placeholder="e.g. Le Thanh Hung" onkeydown="if(event.key==='Enter')addManual()"/>
+      </div>
+      <div class="fg" style="flex:1;min-width:100px">
+        <label>Nickname (optional)</label>
+        <input id="i-nick" type="text" placeholder="e.g. Alex" onkeydown="if(event.key==='Enter')addManual()"/>
+      </div>
+      <div class="fg">
+        <label>Grade</label>
+        <select id="i-grade">
+          <option>A+</option><option>A</option><option>B</option><option>C</option>
+        </select>
+      </div>
+      <div class="fg" style="width:65px">
+        <label>%</label>
+        <input id="i-pct" type="number" placeholder="74" min="0" max="100"/>
+      </div>
+      <div class="fg">
+        <label>Progress</label>
+        <select id="i-prog">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Effort</label>
+        <select id="i-effort">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Behaviour</label>
+        <select id="i-beh">
+          <option value="">—</option>
+          <option>Very Good</option><option>Good</option><option>Satisfactory</option><option>Needs Improvement</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Gender <span style="color:var(--danger)">*</span></label>
+        <div class="gender-radio">
+          <label><input type="radio" name="i-gender" value="M"/> Male</label>
+          <label><input type="radio" name="i-gender" value="F"/> Female</label>
+        </div>
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addManual()">+ Add</button>
+      </div>
+    </div>
+    <p class="hint">Tip: Paste names with nicknames in brackets — <em>Le Thanh Hung (Alex)</em> — extracted automatically. Progress/Effort/Behaviour drive auto comment selection in Tab 2.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Import from Spreadsheet or Image</div>
+    <div class="upload-grid">
+      <label class="upload-box">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleSheet(event)"/>
+        <div class="icon">📊</div>
+        <strong>Upload Spreadsheet</strong>
+        <p>Excel (.xlsx / .xls) or CSV</p>
+        <p>Columns: Name, Grade; optional: Nickname, %, Progress, Effort, Behaviour</p>
+      </label>
+      <label class="upload-box">
+        <input type="file" accept="image/*" onchange="handleImg(event)"/>
+        <div class="icon">🖼️</div>
+        <strong>Upload Image / Screenshot</strong>
+        <p>Extracts names &amp; grades via OCR</p>
+        <p>Review roster carefully after — OCR may merge words</p>
+      </label>
+    </div>
+    <div id="ocr-status"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <span style="font-weight:600;font-size:.95rem">Student Roster (<span id="s-count">0</span>)</span>
+      <button class="btn btn-red btn-sm" onclick="clearAll()">Clear All</button>
+    </div>
+    <div id="roster-wrap">
+      <div class="empty"><div class="ei">👨‍🎓</div><p>No students yet — add one above or import a file.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TAB 2 · Build Comments -->
+<div id="pane-comments" class="pane">
+  <div class="toolbar">
+    <span style="font-size:.85rem;color:var(--muted)">
+      <strong>Auto mode</strong> selects sentences from Progress, Effort &amp; Behaviour.
+      Switch to <strong>Manual</strong> to pick your own. Target: 330–350 chars.
+    </span>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-ghost btn-sm" onclick="setAllMode('auto')">⚡ Auto-fill All</button>
+      <button class="btn btn-ghost btn-sm" onclick="setAllMode('manual')">✏️ All Manual</button>
+    </div>
+  </div>
+  <div id="comments-wrap">
+    <div class="empty"><div class="ei">✏️</div><p>Add students in Tab 1 first.</p></div>
+  </div>
+</div>
+
+<!-- TAB 3 · Export -->
+<div id="pane-export" class="pane">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:.9rem 1.25rem">
+    <span style="font-size:.875rem;color:var(--muted)">Review your comments, then copy or download.</span>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn btn-ghost" onclick="copyAll()">📋 Copy All</button>
+      <button class="btn btn-primary" onclick="downloadCSV()">⬇ Download CSV</button>
+    </div>
+  </div>
+  <div id="export-wrap">
+    <div class="empty"><div class="ei">📄</div><p>Add students and build comments first.</p></div>
+  </div>
+</div>
+
+<!-- Scripts loaded in dependency order -->
+<script src="js/bank.js"></script>
+<script src="js/names.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/state.js"></script>
+<script src="js/render.js"></script>
+<script src="js/import.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
